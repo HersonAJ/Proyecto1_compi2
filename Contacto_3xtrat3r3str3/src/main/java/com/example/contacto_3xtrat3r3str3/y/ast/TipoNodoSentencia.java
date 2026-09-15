@@ -1,0 +1,20 @@
+package com.example.contacto_3xtrat3r3str3.y.ast;
+
+public enum TipoNodoSentencia {
+    DECLARACION_VARIABLE,
+    DECLARACION_ARREGLO,
+    DECLARACION_MATRIZ,
+    DECLARACION_ESTRUCTURA,
+    ASIGNACION,
+    INCREMENTO_DECREMENTO,
+    CONDICIONAL,
+    ELEGIR,
+    CICLO_PARA,
+    CICLO_MIENTRAS,
+    CICLO_HACER_MIENTRAS,
+    RETORNO,
+    IMPRIMIR,
+    LEER,
+    ROMPER,
+    CONTINUAR
+}

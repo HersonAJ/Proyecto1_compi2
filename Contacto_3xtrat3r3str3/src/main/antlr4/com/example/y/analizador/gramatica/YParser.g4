@@ -21,7 +21,7 @@ atributoEstructura  : tipo ID (COR_IZQ ENTERO_LIT COR_DER)? NEWLINE
 seccionFunciones    : SEC_FUNCIONES NEWLINE definicionFuncion+
                     ;
 
-definicionFuncion   : DEFINIR ID PAR_IZQ parametros? PAR_DER (FLECHA tipo)? DOS_PUNTOS NEWLINE cuerpoFuncion DEDENT
+definicionFuncion   : DEFINIR ID PAR_IZQ parametros? PAR_DER (FLECHA tipo)? DOS_PUNTOS NEWLINE INDENT cuerpoFuncion DEDENT
                     ;
 
 parametros  :   parametro (COMA parametro)*
