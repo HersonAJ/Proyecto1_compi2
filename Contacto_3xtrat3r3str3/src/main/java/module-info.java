@@ -9,6 +9,7 @@ module com.example.contacto_3xtrat3r3str3 {
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.bootstrapfx.core;
     requires eu.hansolo.tilesfx;
+    requires org.antlr.antlr4.runtime;
 
     opens com.example.contacto_3xtrat3r3str3 to javafx.fxml;
     exports com.example.contacto_3xtrat3r3str3;
