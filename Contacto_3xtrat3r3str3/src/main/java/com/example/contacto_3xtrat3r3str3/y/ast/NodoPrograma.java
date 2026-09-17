@@ -5,8 +5,6 @@ import java.util.List;
 /**
  * Nodo raíz del AST. Contiene todas las estructuras y funciones
  * definidas en un archivo .y.
- *
- * Recordatorio: en Y? NO se permiten variables globales.
  */
 public sealed interface NodoPrograma extends NodoAST permits NodoPrograma.Programa {
 

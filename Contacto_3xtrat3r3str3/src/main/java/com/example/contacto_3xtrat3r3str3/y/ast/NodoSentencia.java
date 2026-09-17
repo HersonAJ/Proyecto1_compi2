@@ -2,11 +2,6 @@ package com.example.contacto_3xtrat3r3str3.y.ast;
 
 import java.util.List;
 
-/**
- * Interfaz sellada para todos los nodos de sentencia (instrucción) del lenguaje Y?.
- *
- * Cada tipo de sentencia es un 'record' inmutable.
- */
 public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.DeclaracionVariable,
         NodoSentencia.DeclaracionArreglo,
@@ -26,10 +21,6 @@ public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.Leer,
         NodoSentencia.Romper,
         NodoSentencia.Continuar {
-
-    /**
-     * Devuelve el tipo de nodo de sentencia.
-     */
     TipoNodoSentencia tipoNodo();
 
     // ============================================================
@@ -60,10 +51,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    /**
-     * Declaración de matriz: 'entero matriz[3][3]'.
-     * Solo se permite sin inicialización según el PDF.
-     */
+    //Declaración de matriz: 'entero matriz[3][3]'.
     record DeclaracionMatriz(int linea, int columna, String tipo, String nombre,
                              int filas, int columnas) implements NodoSentencia {
         @Override

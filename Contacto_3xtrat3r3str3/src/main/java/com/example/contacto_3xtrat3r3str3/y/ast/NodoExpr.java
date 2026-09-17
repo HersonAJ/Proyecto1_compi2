@@ -4,14 +4,6 @@ import com.example.contacto_3xtrat3r3str3.y.ast.NodoAST;
 
 import java.util.List;
 
-/**
- * Interfaz sellada para todos los nodos de expresión del lenguaje Y?.
- *
- * Cada tipo de expresión es un 'record' inmutable. Esto nos da:
- *  - Igualdad estructural automática.
- *  - toString() legible para depuración.
- *  - Patrón moderno de Java 21.
- */
 public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.LiteralEntero,
         NodoExpr.LiteralFlotante,
@@ -25,10 +17,6 @@ public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.Unaria,
         NodoExpr.LlamadaFuncion {
 
-    /**
-     * Devuelve el tipo de nodo de expresión.
-     * Útil para clasificar sin instanceof.
-     */
     TipoNodoExpr tipoNodo();
 
     // ============================================================
@@ -111,7 +99,7 @@ public sealed interface NodoExpr extends NodoAST permits
 
     /**
      * Operación binaria: +, -, *, /, ==, !=, <, >, <=, >=, &&, ||.
-     * Ejemplo: edad > 18  →  Binaria(">", Identificador(edad), LiteralEntero(18))
+     * Ejemplo: edad > 18  ->  Binaria(">", Identificador(edad), LiteralEntero(18))
      */
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override
@@ -120,12 +108,8 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    /**
-     * Operación unaria: -x, !x, ++x, --x, x++, x--.
-     *
-     * @param prefijo true para ++x, --x, -x, !x
-     *                false para x++, x--
-     */
+
+    //Operación unaria: -x, !x, ++x, --x, x++, x--.
     record Unaria(int linea, int columna, String operador, NodoExpr operando, boolean prefijo) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() {
