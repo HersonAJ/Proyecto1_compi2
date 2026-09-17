@@ -123,18 +123,22 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
 
     @Override
     public NodoAST visitParametro(YParser.ParametroContext ctx) {
-        if (ctx.tipo() != null && !ctx.ID().isEmpty()) {
-            return new NodoParametro.Parametro(linea(ctx), columna(ctx), normalizarTipo(ctx.tipo().getText()), null, ctx.ID(0).getText(), false,false);
+        //caso: [] tipo ID -> arreglo por referencia
+        if (ctx.COR_IZQ() != null && ctx.tipo() != null) {
+            return new NodoParametro.Parametro(linea(ctx), columna(ctx),
+                    normalizarTipo(ctx.tipo().getText()), null, ctx.ID(0).getText(), true, false);
         }
 
-        if (ctx.ID().size() == 2) {
-            if (ctx.tipo() != null) {
-                return new NodoParametro.Parametro(linea(ctx), columna(ctx), normalizarTipo(ctx.tipo().getText()),
-                        null, ctx.ID(0).getText(), true, false);
-            }
+        //caso: tipo ID -> valor
+        if (ctx.tipo() != null) {
+            return new NodoParametro.Parametro(linea(ctx), columna(ctx),
+                    normalizarTipo(ctx.tipo().getText()), null, ctx.ID(0).getText(), false, false);
+        }
 
-            return new NodoParametro.Parametro(linea(ctx), columna(ctx), null, ctx.ID(0).getText(),
-                    ctx.ID(1).getText(), false,true);
+        //caso: {} Tipo ID -> estructura por referencia
+        if (ctx.LLAVE_IZQ() != null && ctx.ID().size() == 2) {
+            return new NodoParametro.Parametro(linea(ctx), columna(ctx),
+                    null, ctx.ID(0).getText(), ctx.ID(1).getText(), false, true);
         }
         return null;
     }
@@ -191,16 +195,16 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
     //declaraciones
     @Override
     public NodoAST visitDeclaracion(YParser.DeclaracionContext ctx) {
-        //caso1: tipo ID (IGUAL expresion? NEWLINE -> entero edad = 25
-        if (ctx.tipo() != null && ctx.ID().size() == 1) {
+        //caso 1: tipo ID (IGUAL expresion)? -> variable simple, sin corchetes
+        if (ctx.tipo() != null && ctx.ID().size() == 1 && ctx.COR_IZQ().isEmpty()) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
             NodoExpr inicializacion = ctx.expresion() != null ? (NodoExpr) visit(ctx.expresion()) : null;
             return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, inicializacion);
         }
 
-        //caso 2: entero numeros[5] = {1, 2, 3, 4, 5}
-        if (ctx.tipo() != null && ctx.COR_IZQ() != null && ctx.ENTERO_LIT() != null) {
+        //caso 2: tipo ID [ ENTERO_LIT ] (IGUAL { listaExpresiones })? -> arreglo 1D
+        if (ctx.tipo() != null && ctx.COR_IZQ().size() == 1) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
             int tamano = Integer.parseInt(ctx.ENTERO_LIT(0).getText());
@@ -218,7 +222,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             return new NodoSentencia.DeclaracionArreglo(linea(ctx), columna(ctx),tipo, nombre, tamano, inicializacion);
         }
 
-        //caso: entero matriz[3][3]
+        //caso 3: tipo ID [ ENTERO_LIT ] [ ENTERO_LIT ] -> matriz, sin inicializador
         if (ctx.tipo() != null && ctx.COR_IZQ().size() == 2) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
@@ -227,7 +231,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             return new NodoSentencia.DeclaracionMatriz(linea(ctx), columna(ctx), tipo, nombre, filas, columnas);
         }
 
-        //caso 4: Persona alumno1 = {....}
+        //caso 4: ID ID (IGUAL { listaExpresiones })? -> instancia de estructura
         if (ctx.tipo() == null && ctx.ID().size() == 2) {
             String tipoEstructura = ctx.ID(0).getText();
             String nombre = ctx.ID(1).getText();
@@ -241,8 +245,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
                     }
                 }
             }
-            return  new NodoSentencia.DeclaracionEstructura(
-                    linea(ctx), columna(ctx), tipoEstructura, nombre, inicializacion);
+            return new NodoSentencia.DeclaracionEstructura(linea(ctx), columna(ctx), tipoEstructura, nombre, inicializacion);
         }
         return null;
     }

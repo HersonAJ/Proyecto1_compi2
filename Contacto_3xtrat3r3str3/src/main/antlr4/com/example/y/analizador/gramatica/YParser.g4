@@ -52,24 +52,24 @@ instruccion : declaracion
             ;
 
 //declaraciones
-declaracion : tipo ID (IGUAL expresion)? NEWLINE
-            | tipo ID COR_IZQ ENTERO_LIT COR_DER (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? NEWLINE
-            | tipo ID COR_IZQ ENTERO_LIT COR_DER COR_IZQ ENTERO_LIT COR_DER NEWLINE
-            | ID ID (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? NEWLINE
+declaracion : tipo ID (IGUAL expresion)? PUNTO_COMA? NEWLINE
+            | tipo ID COR_IZQ ENTERO_LIT COR_DER (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? PUNTO_COMA? NEWLINE
+            | tipo ID COR_IZQ ENTERO_LIT COR_DER COR_IZQ ENTERO_LIT COR_DER PUNTO_COMA? NEWLINE
+            | ID ID (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? PUNTO_COMA? NEWLINE
             ;
 
 listaExpresiones    : expresion (COMA expresion)*
                     ;
 
 //asignaciones
-asignacion  : accesoVariable IGUAL expresion NEWLINE
+asignacion  : accesoVariable IGUAL expresion PUNTO_COMA? NEWLINE
             ;
 
 accesoVariable  : ID (PUNTO ID | COR_IZQ expresion COR_DER)*
                 ;
 
 //incremento/decremento
-incrementoDecremento    : ID (INCREMENTO | DECREMENTO) NEWLINE
+incrementoDecremento    : ID (INCREMENTO | DECREMENTO) PUNTO_COMA? NEWLINE
                         ;
 
 //condicional
@@ -109,25 +109,25 @@ cicloMientras   : MIENTRAS PAR_IZQ expresion PAR_DER HACER NEWLINE INDENT bloque
                 ;
 
 //ciclo HACER - MIENTRAS
-cicloHacerMientras  : HACER DOS_PUNTOS NEWLINE INDENT bloque DEDENT MIENTRAS PAR_IZQ expresion PAR_DER NEWLINE
+cicloHacerMientras  : HACER DOS_PUNTOS NEWLINE INDENT bloque DEDENT MIENTRAS PAR_IZQ expresion PAR_DER PUNTO_COMA? NEWLINE
                     ;
 
 //retorno
-retorno : RETORNAR expresion NEWLINE
+retorno : RETORNAR expresion PUNTO_COMA? NEWLINE
         ;
 
 //funciones especiales
-imprimir    : IMPRIMIR PAR_IZQ expresion PAR_DER NEWLINE
+imprimir    : IMPRIMIR PAR_IZQ expresion PAR_DER PUNTO_COMA? NEWLINE
             ;
 
-leer    : LEER PAR_IZQ PAR_DER NEWLINE
+leer    : LEER PAR_IZQ PAR_DER PUNTO_COMA? NEWLINE
         ;
 
 //control de ciclos
-romper  : ROMPER NEWLINE
+romper  : ROMPER PUNTO_COMA? NEWLINE
         ;
 
-continuar   : CONTINUAR NEWLINE
+continuar   : CONTINUAR PUNTO_COMA? NEWLINE
             ;
 
 //Expresiones con precedencia
