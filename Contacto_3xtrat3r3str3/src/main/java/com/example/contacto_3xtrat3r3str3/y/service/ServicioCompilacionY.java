@@ -6,6 +6,9 @@ import com.example.contacto_3xtrat3r3str3.y.ast.NodoAST;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoPrograma;
 import com.example.contacto_3xtrat3r3str3.y.errores.ErrorPosicional;
 import com.example.contacto_3xtrat3r3str3.y.errores.ResultadoCompilacionY;
+import com.example.contacto_3xtrat3r3str3.y.semantica.TablaSimbolos;
+import com.example.contacto_3xtrat3r3str3.y.semantica.ValidadorSemantico;
+import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import com.example.y.analizador.gramatica.YLexer;
 import com.example.y.analizador.gramatica.YParser;
 import org.antlr.v4.runtime.*;
@@ -13,21 +16,6 @@ import org.antlr.v4.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Orquesta el pipeline de compilación para el lenguaje Y?:
- *
- *   código fuente
- *       ↓
- *   PreprocesadorIndentacion  (tabs -> <INDENT>/<DEDENT>/<NEWLINE>)
- *       ↓
- *   YLexer (ANTLR)
- *       ↓
- *   YParser (ANTLR)
- *       ↓
- *   ASTBuilder
- *       ↓
- *   NodoPrograma
- */
 public class ServicioCompilacionY {
 
     private static final boolean DEBUG = true;
@@ -42,9 +30,8 @@ public class ServicioCompilacionY {
         // Validar entrada vacía
         if (codigoFuente == null || codigoFuente.trim().isEmpty()) {
             return new ResultadoCompilacionY(
-                    false, null, null,
-                    List.of(),
-                    List.of(),
+                    false, null, null, null,
+                    List.of(), List.of(), List.of(),
                     List.of("El código está vacío")
             );
         }
@@ -54,8 +41,8 @@ public class ServicioCompilacionY {
         } catch (StackOverflowError soe) {
             if (DEBUG) System.err.println("StackOverflowError durante el análisis");
             return new ResultadoCompilacionY(
-                    false, null, null,
-                    List.of(), List.of(),
+                    false, null, null, null,
+                    List.of(), List.of(), List.of(),
                     List.of("El código produjo una estructura demasiado profunda o inválida.")
             );
         } catch (Exception e) {
@@ -64,8 +51,8 @@ public class ServicioCompilacionY {
                 e.printStackTrace();
             }
             return new ResultadoCompilacionY(
-                    false, null, null,
-                    List.of(), List.of(),
+                    false, null, null, null,
+                    List.of(), List.of(), List.of(),
                     List.of("Error interno inesperado: " + e.getMessage())
             );
         }
@@ -73,9 +60,7 @@ public class ServicioCompilacionY {
 
     private ResultadoCompilacionY analizarInterno(String codigoFuente) {
 
-        // ============================================================
-        // 1. PREPROCESADOR DE INDENTACION
-        // ============================================================
+        // 1. PREPROCESADOR
         if (DEBUG) System.out.println("1. Preprocesando indentación...");
 
         List<ErrorPosicional> erroresLexicos = new ArrayList<>();
@@ -92,20 +77,15 @@ public class ServicioCompilacionY {
             erroresLexicos.add(new ErrorPosicional(-1, -1, e.getMessage()));
             if (DEBUG) System.err.println("Error en preprocesador: " + e.getMessage());
             return new ResultadoCompilacionY(
-                    false, null, null,
-                    erroresLexicos,
-                    List.of(),
-                    List.of()
+                    false, null, null, null,
+                    erroresLexicos, List.of(), List.of(), List.of()
             );
         }
 
-        // ============================================================
         // 2. LEXER
-        // ============================================================
         if (DEBUG) System.out.println("2. Ejecutando lexer...");
 
         YLexer lexer = new YLexer(CharStreams.fromString(codigoPreprocesado));
-
         lexer.removeErrorListeners();
         lexer.addErrorListener(new BaseErrorListener() {
             @Override
@@ -123,16 +103,12 @@ public class ServicioCompilacionY {
         if (!erroresLexicos.isEmpty()) {
             if (DEBUG) System.out.println("   Errores léxicos encontrados: " + erroresLexicos.size());
             return new ResultadoCompilacionY(
-                    false, null, codigoPreprocesado,
-                    erroresLexicos,
-                    List.of(),
-                    List.of()
+                    false, null, codigoPreprocesado, null,
+                    erroresLexicos, List.of(), List.of(), List.of()
             );
         }
 
-        // ============================================================
         // 3. PARSER
-        // ============================================================
         if (DEBUG) System.out.println("3. Ejecutando parser...");
 
         YParser parser = new YParser(tokens);
@@ -162,63 +138,80 @@ public class ServicioCompilacionY {
         if (!erroresSintacticos.isEmpty()) {
             if (DEBUG) System.out.println("   Errores sintácticos encontrados: " + erroresSintacticos.size());
             return new ResultadoCompilacionY(
-                    false, null, codigoPreprocesado,
-                    List.of(),
-                    erroresSintacticos,
-                    List.of()
+                    false, null, codigoPreprocesado, null,
+                    List.of(), erroresSintacticos, List.of(), List.of()
             );
         }
 
-        // ============================================================
-        // 4. CONSTRUIR AST
-        // ============================================================
+        // 4. AST
         if (DEBUG) System.out.println("4. Construyendo AST...");
 
         NodoPrograma.Programa programa;
         try {
             ASTBuilder builder = new ASTBuilder();
             NodoAST nodo = builder.visit(tree);
-            if (nodo instanceof NodoPrograma.Programa np) {
-                programa = np;
-            } else {
-                programa = null;
-            }
+            programa = (nodo instanceof NodoPrograma.Programa np) ? np : null;
         } catch (Exception e) {
             if (DEBUG) {
                 System.err.println("Error al construir AST: " + e.getMessage());
                 e.printStackTrace();
             }
             return new ResultadoCompilacionY(
-                    false, null, codigoPreprocesado,
-                    List.of(), List.of(),
+                    false, null, codigoPreprocesado, null,
+                    List.of(), List.of(), List.of(),
                     List.of("Error al construir el AST: " + e.getMessage())
             );
         }
 
         if (programa == null) {
             return new ResultadoCompilacionY(
-                    false, null, codigoPreprocesado,
-                    List.of(), List.of(),
+                    false, null, codigoPreprocesado, null,
+                    List.of(), List.of(), List.of(),
                     List.of("El AST resultante es nulo")
             );
         }
 
-        // ============================================================
-        // 5. RESULTADO EXITOSO
-        // ============================================================
+        // 5. VALIDACION SEMANTICA
+        if (DEBUG) System.out.println("5. Validando semánticamente...");
+
+        ValidadorSemantico validador = new ValidadorSemantico();
+        List<ErrorSemantico> erroresSemanticos;
+        try {
+            erroresSemanticos = validador.analizar(programa);
+            if (DEBUG) {
+                System.out.println("   Errores semánticos encontrados: " + erroresSemanticos.size());
+            }
+        } catch (Exception e) {
+            if (DEBUG) {
+                System.err.println("Error en validación semántica: " + e.getMessage());
+                e.printStackTrace();
+            }
+            return new ResultadoCompilacionY(
+                    false, programa, codigoPreprocesado, null,
+                    List.of(), List.of(), List.of(),
+                    List.of("Error en validación semántica: " + e.getMessage())
+            );
+        }
+
+        // 6. RESULTADO
+        TablaSimbolos tabla = null;
+        boolean exitoso = erroresSemanticos.isEmpty();
+
         if (DEBUG) {
-            System.out.println("5. Análisis completado con éxito.");
+            System.out.println("6. Análisis completado. Exitoso: " + exitoso);
             System.out.println("   Estructuras: " + programa.estructuras().size());
             System.out.println("   Funciones: " + programa.funciones().size());
             System.out.println("=== FIN ANALISIS Y? ===");
         }
 
         return new ResultadoCompilacionY(
-                true,
+                exitoso,
                 programa,
                 codigoPreprocesado,
+                tabla,
                 List.of(),
                 List.of(),
+                erroresSemanticos,
                 List.of()
         );
     }

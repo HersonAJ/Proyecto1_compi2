@@ -13,19 +13,21 @@ public class PreprocesadorIndentacion {
 
         StringBuilder salida = new StringBuilder();
 
-        //separar por saldos de linea
+        //separar por saltos de linea
         String[] lineas = codigoFuente.split("\\r?\\n", -1);
 
         for (int i = 0; i < lineas.length; i++) {
             String linea = lineas[i];
 
-            //se ignoran las lineas totalmente vacias o solo con espacios
+            //lineas vacias: emitir solo el salto real para conservar el conteo de lineas
             if (linea.trim().isEmpty()) {
+                salida.append("\n");
                 continue;
             }
 
-            //ignorar lineas que solo son comentarios
-            if(esSoloComentario(linea)) {
+            //lineas que solo son comentarios: emitir solo el salto real
+            if (esSoloComentario(linea)) {
+                salida.append("\n");
                 continue;
             }
 
@@ -36,15 +38,15 @@ public class PreprocesadorIndentacion {
             validarSinEspaciosIniciales(linea);
 
             //comparar con el nivel anterior de la pila
-            int nivelAnterior = pilaIndentacion.get(pilaIndentacion.size() -1);
+            int nivelAnterior = pilaIndentacion.get(pilaIndentacion.size() - 1);
 
             if (nivelActual > nivelAnterior) {
-                //aunto la indentacion : un INDENT por cada nivel extra
+                //aumento la indentacion : un INDENT por cada nivel extra
                 for (int n = nivelAnterior; n < nivelActual; n++) {
                     salida.append("<INDENT>");
                     pilaIndentacion.add(nivelAnterior + 1);
                 }
-            } else if ( nivelActual < nivelAnterior) {
+            } else if (nivelActual < nivelAnterior) {
                 //disminuyo: un DEDENT por cada nivel que se baja
                 while (pilaIndentacion.get(pilaIndentacion.size() - 1) > nivelActual) {
                     salida.append("<DEDENT>");
@@ -55,6 +57,9 @@ public class PreprocesadorIndentacion {
             //quitar la indentacion inicial y agregar el contenido
             String contenido = linea.substring(nivelActual).stripTrailing();
             salida.append(contenido).append("<NEWLINE>");
+
+            //salto real para conservar el conteo de lineas de ANTLR
+            salida.append("\n");
         }
 
         //al final del archivo, cerrar todos los niveles abiertos

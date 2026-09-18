@@ -198,21 +198,128 @@ public class ValidadorTipos {
         return false;
     }
 
-
-
-    // TODO: usa tipoDeExpresion() una vez este resuelta la jerarquia
+    //valida que una inicializacion sea compatible con el tipo declarado
+    //se una en 'entero x = <expr>
     public void validarInicializacion(String tipoDeclarado, NodoExpr inicializacion) {
+        if (inicializacion == null) return;
+
+        String tipoExpr = tipoDeExpresion(inicializacion);
+        if (tipoExpr == null) return;
+
+        if (!esAsignable(tipoDeclarado, tipoExpr)) {
+            errores.add(new ErrorSemantico(inicializacion.linea(), inicializacion.columna(), "Tipo incompatible en inicializacion",
+                    "No se puede asignar '" + tipoExpr + "' a una variable de tipo '" + tipoDeclarado + "'"));
+        }
     }
 
-    // TODO: el resultado de tipoDeExpresion(condicion) debe ser "bool"
+    //valida que una condicion sea de tipo bool
+    //se usa en si, sino, mientras, hacer-mientras
     public void validarCondicionBooleana(NodoExpr condicion) {
+        if (condicion == null) return;
+
+        String tipo = tipoDeExpresion(condicion);
+        if (tipo == null) return;
+
+        if (!tipo.equals("bool")) {
+            errores.add(new ErrorSemantico(condicion.linea(), condicion.columna(), "Tipo incompatible en condicion",
+                    "La condicion debe ser 'bool', se encontro '" + tipo + "'"));
+        }
     }
 
-    // TODO: comparar contra funcionActual.tipoRetorno()
+    //vañoda qie eñ vañpr de un 'retornar' sea compatible con el tipo de retorno declarado en la funcion
     public void validarRetorno(NodoSentencia.Retorno retorno, String tipoRetornoEsperado) {
+        //caso 1: funcion sin retorno que no retorna un valor
+        if (tipoRetornoEsperado == null) {
+            if (retorno.valor() != null) {
+                errores.add(new ErrorSemantico(retorno.linea(), retorno.columna(), "Retorno incompatible",
+                        "La funcion no declara tipo de retorno, pero se esta retornando un valor"));
+            }
+            return;
+        }
+
+        //caso 2: comparar el tipo del valor con el esperado
+        String tipoValor = tipoDeExpresion(retorno.valor());
+        if (tipoValor == null)return;
+
+        if (!esAsignable(tipoRetornoEsperado, tipoValor)) {
+            errores.add(new ErrorSemantico(retorno.linea(), retorno.columna(), "Tipo incompatible de retorno",
+                    "Se esperaba '" + tipoRetornoEsperado + "', se encontro '" + tipoValor + "'"));
+        }
     }
 
-    // TODO: comparar argumentos contra definicion.tipoParametros()
+    // valida que los argumentos de una llamada coincidan en numero y tipo con los parametros de la funcion
     public void validarLlamada(NodoExpr.LlamadaFuncion llamada, TablaSimbolos.DefinicionFuncion definicion) {
+        if (llamada == null || definicion == null) return;
+
+        List<NodoExpr> argumentos = llamada.argumentos();
+        List<TablaSimbolos.Parametro> params = definicion.parametros();
+
+        //1 verificar el numero de argumentos
+        if (argumentos.size() != params.size()) {
+            errores.add(new ErrorSemantico(llamada.linea(), llamada.columna(), "Argumentos incorrectos",
+                    "La funcion '" + definicion.nombre() + "' espera  " + params.size() +
+                    " arumentos, se econtraron " + argumentos.size()));
+            return;
+        }
+
+        //2 verificar tipo de aargumentos por argumento
+        for (int i = 0; i < argumentos.size(); i++) {
+            NodoExpr arg = argumentos.get(i);
+            TablaSimbolos.Parametro parametro = params.get(i);
+
+            String tipoArg = tipoDeExpresion(arg);
+            if (tipoArg == null) continue;;
+
+            String tipoParam = parametro.tipo();
+            if (tipoParam == null) {
+                tipoParam = parametro.tipoEstructura();
+            }
+
+            if (!esAsignable(tipoParam, tipoArg)) {
+                errores.add(new ErrorSemantico(arg.linea(), arg.columna(), "Argumento incompatible",
+                        "El argumento " + (i + 1) + " de '" + definicion.nombre() +
+                        "' espera '" + tipoParam + "', se encontro '" + tipoArg + "'"));
+            }
+        }
+    }
+
+    /**
+     * Devuelve true si un valor de tipo 'tipoOrigen' se puede asignar
+     * a una variable de tipo 'tipoDestino', según la tabla de compatibilidad:
+     *
+     *   destino \ origen | entero | flotante | caracter | cadena | bool
+     *   -----------------|--------|----------|----------|--------|------
+     *   entero           |  SI    |    NO    |    NO    |   NO   |  NO
+     *   flotante         |  SI    |    SI    |    NO    |   NO   |  NO
+     *   caracter         |  NO    |    NO    |    SI    |   NO   |  NO
+     *   cadena           |  SI    |    SI    |    SI    |   SI   |  SI   (concatenación)
+     *   bool             |  NO    |    NO    |    NO    |   NO   |  SI
+     */
+
+    private boolean esAsignable(String tipoDestino, String tipoOrigen) {
+        if (tipoDestino == null || tipoOrigen == null) return false;
+
+        //mismo tipo: siempre valido
+        if (tipoDestino.equals(tipoOrigen)) return true;
+
+        //cadena aceptada cualquier cosa (concatenacion)
+        if (tipoDestino.equals("cadena")) return true;
+
+        //entro  -> flotante: converison implicita permitida
+        if (tipoDestino.equals("flotante") && tipoOrigen.equals("entero")) return true;
+
+        return false;
+    }
+
+    //Valida que un valor de tipo 'tipoValor' se pueda asignar a una variable de tipo 'tipoDestino'. Reporta error si no.
+
+    public void validarAsignacion(String tipoDestino, String tipoValor, int linea, int columna) {
+        if (tipoDestino == null || tipoValor == null) return;
+
+        if (!esAsignable(tipoDestino, tipoValor)) {
+            errores.add(new ErrorSemantico(linea, columna,
+                    "Tipo incompatible en asignación",
+                    "No se puede asignar '" + tipoValor + "' a una variable de tipo '" + tipoDestino + "'"));
+        }
     }
 }
