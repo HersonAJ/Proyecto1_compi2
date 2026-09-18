@@ -11,8 +11,8 @@ module com.example.contacto_3xtrat3r3str3 {
     requires eu.hansolo.tilesfx;
     requires org.antlr.antlr4.runtime;
 
-    opens com.example.contacto_3xtrat3r3str3 to javafx.fxml;
-    exports com.example.contacto_3xtrat3r3str3;
+    opens com.example.contacto_3xtrat3r3str3.ui to javafx.graphics, javafx.fxml;
+
     exports com.example.contacto_3xtrat3r3str3.y.ast;
     exports com.example.contacto_3xtrat3r3str3.y.semantica;
     exports com.example.contacto_3xtrat3r3str3.y.semantica.error;

@@ -146,7 +146,7 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>
-                                com.example.contacto_3xtrat3r3str3/com.example.contacto_3xtrat3r3str3.HelloApplication
+                                com.example.contacto_3xtrat3r3str3/com.example.contacto_3xtrat3r3str3.ui.MainApp
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
@@ -158,13 +158,6 @@
                     </execution>
                 </executions>
             </plugin>
-<!--
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-            </plugin>
--->
         </plugins>
     </build>
 </project>
