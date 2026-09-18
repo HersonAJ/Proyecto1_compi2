@@ -15,19 +15,67 @@ public class ValidadorAlcance {
         this.errores = errores;
     }
 
+    /**
+     * Recorre cualquier expresion buscando identificadores y llamadas a funcion,
+     * y reporta si alguno no existe. Es el punto de entrada que usa el orquestador.
+     */
+    public void resolverExpresion(NodoExpr expr) {
+        if (expr == null) return;
+
+        switch (expr.tipoNodo()) {
+            case IDENTIFICADOR -> resolverIdentificador((NodoExpr.Identificador) expr);
+
+            case ACCESO_ARRAY -> {
+                NodoExpr.AccesoArray acceso = (NodoExpr.AccesoArray) expr;
+                resolverExpresion(acceso.arreglo());
+                resolverExpresion(acceso.indice());
+            }
+
+            case ACCESO_ATRIBUTO -> {
+                NodoExpr.AccesoAtributo acceso = (NodoExpr.AccesoAtributo) expr;
+                resolverExpresion(acceso.objeto());
+                // TODO(ValidadorEstructuras): confirmar que acceso.atributo() exista en el tipo de acceso.objeto()
+            }
+
+            case BINARIA -> {
+                NodoExpr.Binaria bin = (NodoExpr.Binaria) expr;
+                resolverExpresion(bin.izquierda());
+                resolverExpresion(bin.derecha());
+            }
+
+            case UNARIA -> resolverExpresion(((NodoExpr.Unaria) expr).operando());
+
+            case LLAMADA_FUNCION -> {
+                NodoExpr.LlamadaFuncion llamada = (NodoExpr.LlamadaFuncion) expr;
+                resolverLlamadaFuncion(llamada);
+                for (NodoExpr arg : llamada.argumentos()) {
+                    resolverExpresion(arg);
+                }
+            }
+
+            //los literales no tienen nada que resolver
+            case LITERAL_ENTERO, LITERAL_FLOTANTE, LITERAL_CADENA, LITERAL_CARACTER, LITERAL_BOOL -> { }
+        }
+    }
+
     public void resolverIdentificador(NodoExpr.Identificador id) {
-        if (!tabla.buscarVariable(id.nombre()).isEmpty()) {
-            errores.add(new ErrorSemantico(id.linea(), id.columna(),
+        resolverNombre(id.nombre(), id.linea(), id.columna());
+    }
+
+    /** Para casos donde solo se tiene el nombre suelto, como en IncrementoDecremento. */
+    public void resolverNombre(String nombre, int linea, int columna) {
+        if (tabla.buscarVariable(nombre).isEmpty()) {
+            errores.add(new ErrorSemantico(linea, columna,
                     "Identificador no declarado",
-                    "'" + id.nombre() + "' no existe en el ambito actual"));
+                    "'" + nombre + "' no existe en el ámbito actual"));
         }
     }
 
     public void resolverLlamadaFuncion(NodoExpr.LlamadaFuncion llamada) {
         if (tabla.buscarFuncion(llamada.nombre()).isEmpty()) {
             errores.add(new ErrorSemantico(llamada.linea(), llamada.columna(),
-                    "Funcion no declarada" ,
-                    "La funcion '" + llamada.nombre() + "' no existe"));
+                    "Función no declarada",
+                    "La función '" + llamada.nombre() + "' no existe"));
         }
     }
 
@@ -35,7 +83,7 @@ public class ValidadorAlcance {
         if (nombreTipo != null && tabla.buscarEstructura(nombreTipo).isEmpty()) {
             errores.add(new ErrorSemantico(linea, columna,
                     "Estructura no declarada",
-                    "El tipo '" + nombreTipo + "' no corresponde a ninguna estructura"));
+                    "El tipo '" + nombreTipo + "' no corresponde a ninguna estructura declarada"));
         }
     }
 }

@@ -46,66 +46,102 @@ public class ValidadorSemantico {
         for (NodoSentencia s : bloque) procesarSentencia(s);
     }
 
-    private void procesarSentencia(NodoSentencia sentencia) {
-        switch (sentencia.tipoNodo()) {
-            case DECLARACION_VARIABLE -> declaraciones.declararVariable((NodoSentencia.DeclaracionVariable) sentencia);
-            case DECLARACION_ARREGLO -> declaraciones.declararArreglo((NodoSentencia.DeclaracionArreglo) sentencia);
-            case DECLARACION_MATRIZ -> declaraciones.declararMatriz((NodoSentencia.DeclaracionMatriz) sentencia);
-            case ASIGNACION -> {}
-            case INCREMENTO_DECREMENTO -> {}
-            case CONDICIONAL -> procesarCondicional((NodoSentencia.Condicional) sentencia);
-            case ELEGIR -> procesarElegir((NodoSentencia.Elegir) sentencia);
-            case CICLO_PARA -> procesarCicloPara((NodoSentencia.CicloPara) sentencia);
-            case CICLO_MIENTRAS -> procesarCicloMientras((NodoSentencia.CicloMientras) sentencia);
-            case CICLO_HACER_MIENTRAS -> procesarCicloHacerMientras((NodoSentencia.CicloHacerMientras) sentencia);
-            case RETORNO -> {}
-            case IMPRIMIR -> {}
-            case LEER -> {}
-            case ROMPER -> flujo.validarRomper((NodoSentencia.Romper) sentencia);
-            case CONTINUAR -> flujo.vallidarContinuar((NodoSentencia.Continuar) sentencia);
+    private void procesarSentencia(NodoSentencia s) {
+        switch (s.tipoNodo()) {
+            case DECLARACION_VARIABLE -> {
+                NodoSentencia.DeclaracionVariable d = (NodoSentencia.DeclaracionVariable) s;
+                alcance.resolverExpresion(d.inicializacion());
+                declaraciones.declararVariable(d);
+            }
+            case DECLARACION_ARREGLO -> {
+                NodoSentencia.DeclaracionArreglo d = (NodoSentencia.DeclaracionArreglo) s;
+                for (var expr : d.inicializacion()) alcance.resolverExpresion(expr);
+                declaraciones.declararArreglo(d);
+            }
+            case DECLARACION_MATRIZ -> declaraciones.declararMatriz((NodoSentencia.DeclaracionMatriz) s);
+            case DECLARACION_ESTRUCTURA -> {
+                NodoSentencia.DeclaracionEstructura d = (NodoSentencia.DeclaracionEstructura) s;
+                alcance.resolverTipoEstructura(d.tipoEstructura(), d.linea(), d.columna());
+                for (var expr : d.inicializacion()) alcance.resolverExpresion(expr);
+                declaraciones.declararVariableEstructura(d);
+            }
+            case ASIGNACION -> {
+                NodoSentencia.Asignacion a = (NodoSentencia.Asignacion) s;
+                alcance.resolverExpresion(a.destino());
+                alcance.resolverExpresion(a.valor());
+                // TODO(ValidadorTipos): compatibilidad entre destino y valor
+            }
+            case INCREMENTO_DECREMENTO -> {
+                NodoSentencia.IncrementoDecremento i = (NodoSentencia.IncrementoDecremento) s;
+                alcance.resolverNombre(i.nombre(), i.linea(), i.columna());
+                // TODO(ValidadorTipos): confirmar que su tipo sea numerico
+            }
+            case CONDICIONAL -> procesarCondicional((NodoSentencia.Condicional) s);
+            case ELEGIR -> procesarElegir((NodoSentencia.Elegir) s);
+            case CICLO_PARA -> procesarCicloPara((NodoSentencia.CicloPara) s);
+            case CICLO_MIENTRAS -> procesarCicloMientras((NodoSentencia.CicloMientras) s);
+            case CICLO_HACER_MIENTRAS -> procesarCicloHacerMientras((NodoSentencia.CicloHacerMientras) s);
+            case RETORNO -> {
+                NodoSentencia.Retorno r = (NodoSentencia.Retorno) s;
+                alcance.resolverExpresion(r.valor());
+                // TODO(ValidadorTipos): comparar contra funcionActual.tipoRetorno()
+            }
+            case IMPRIMIR -> alcance.resolverExpresion(((NodoSentencia.Imprimir) s).expresion());
+            case LEER -> { }
+            case ROMPER -> flujo.validarRomper((NodoSentencia.Romper) s);
+            case CONTINUAR -> flujo.validarContinuar((NodoSentencia.Continuar) s);
         }
     }
 
-    private void procesarCondicional(NodoSentencia.Condicional condicional) {
+    private void procesarCondicional(NodoSentencia.Condicional c) {
+        alcance.resolverExpresion(c.condicion());
         tabla.entrarScope("si");
-        procesarBloque(condicional.cuerpoSi());
+        procesarBloque(c.cuerpoSi());
         tabla.salirScope();
 
-        if (condicional.cuerpoSino() != null) {
+        if (c.cuerpoSino() != null) {
+            alcance.resolverExpresion(c.condicionSino());
             tabla.entrarScope("sino");
-            procesarBloque(condicional.cuerpoSino());
+            procesarBloque(c.cuerpoSino());
             tabla.salirScope();
         }
-        if (condicional.cuerpoContrario() != null) {
+        if (c.cuerpoContrario() != null) {
             tabla.entrarScope("contrario");
-            procesarBloque(condicional.cuerpoContrario());
+            procesarBloque(c.cuerpoContrario());
             tabla.salirScope();
         }
     }
 
-    private void procesarElegir(NodoSentencia.Elegir elegir) {
-        for (NodoSentencia.CasoElegir caso : elegir.casos()) {
+    private void procesarElegir(NodoSentencia.Elegir e) {
+        alcance.resolverExpresion(e.expresion());
+        for (NodoSentencia.CasoElegir caso : e.casos()) {
             tabla.entrarScope("caso");
             procesarBloque(caso.cuerpo());
             tabla.salirScope();
         }
-        if (elegir.siempre() != null) {
+        if (e.siempre() != null) {
             tabla.entrarScope("siempre");
-            procesarBloque(elegir.siempre().cuerpo());
+            procesarBloque(e.siempre().cuerpo());
             tabla.salirScope();
         }
     }
 
-    private void procesarCicloPara(NodoSentencia.CicloPara ciclo) {
+
+    private void procesarCicloPara(NodoSentencia.CicloPara c) {
         tabla.entrarScope("para");
-        declaraciones.declararVariableCiclo(ciclo.nombreVariable(), ciclo.tipoInicializacion(), ciclo.linea(), ciclo.columna());
+        declaraciones.declararVariableCiclo(c.nombreVariable(), c.tipoInicializacion(), c.linea(), c.columna());
+        alcance.resolverExpresion(c.valorInicial());
+        alcance.resolverExpresion(c.condicion());
+        //la variable que se incrementa/decrementa en el 'para' debe ser la misma declarada en la inicializacion
+        //(no lo valida resolverNombre porque acabamos de declararla arriba; esto es coherencia, no existencia)
         flujo.entrarCiclo();
-        procesarBloque(ciclo.cuerpo());
+        procesarBloque(c.cuerpo());
         flujo.salirCiclo();
         tabla.salirScope();
     }
 
     private void procesarCicloMientras(NodoSentencia.CicloMientras c) {
+        alcance.resolverExpresion(c.condicion());
         tabla.entrarScope("mientras");
         flujo.entrarCiclo();
         procesarBloque(c.cuerpo());
@@ -119,6 +155,7 @@ public class ValidadorSemantico {
         procesarBloque(c.cuerpo());
         flujo.salirCiclo();
         tabla.salirScope();
+        alcance.resolverExpresion(c.condicion());
     }
 
     public List<ErrorSemantico> getErrores() {

@@ -13,4 +13,7 @@ module com.example.contacto_3xtrat3r3str3 {
 
     opens com.example.contacto_3xtrat3r3str3 to javafx.fxml;
     exports com.example.contacto_3xtrat3r3str3;
+    exports com.example.contacto_3xtrat3r3str3.y.ast;
+    exports com.example.contacto_3xtrat3r3str3.y.semantica;
+    exports com.example.contacto_3xtrat3r3str3.y.semantica.error;
 }

@@ -22,16 +22,16 @@ public class ValidadorFlujo {
         nivelCiclo--;
     }
 
-    public void validarRomper(NodoSentencia.Romper romper) {
+    public void validarRomper(NodoSentencia.Romper r) {
         if (nivelCiclo == 0) {
-            errores.add(new ErrorSemantico(romper.linea(), romper.columna(),
+            errores.add(new ErrorSemantico(r.linea(), r.columna(),
                     "Corrupcion de flujo", "'romper' usado fuera de un ciclo"));
         }
     }
 
-    public void vallidarContinuar(NodoSentencia.Continuar continuar) {
+    public void validarContinuar(NodoSentencia.Continuar c) {
         if (nivelCiclo == 0) {
-            errores.add(new ErrorSemantico(continuar.linea(), continuar.columna(),
+            errores.add(new ErrorSemantico(c.linea(), c.columna(),
                     "Corrupcion de flujo", "'continuar' usado fuera de un ciclo"));
         }
     }
