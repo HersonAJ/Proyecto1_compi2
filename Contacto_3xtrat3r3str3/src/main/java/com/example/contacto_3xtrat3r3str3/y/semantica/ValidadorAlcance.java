@@ -15,10 +15,7 @@ public class ValidadorAlcance {
         this.errores = errores;
     }
 
-    /**
-     * Recorre cualquier expresion buscando identificadores y llamadas a funcion,
-     * y reporta si alguno no existe. Es el punto de entrada que usa el orquestador.
-     */
+    //Recorre cualquier expresion buscando identificadores y llamadas a funcion, y reporta si alguno no existe
     public void resolverExpresion(NodoExpr expr) {
         if (expr == null) return;
 
@@ -34,7 +31,6 @@ public class ValidadorAlcance {
             case ACCESO_ATRIBUTO -> {
                 NodoExpr.AccesoAtributo acceso = (NodoExpr.AccesoAtributo) expr;
                 resolverExpresion(acceso.objeto());
-                // TODO(ValidadorEstructuras): confirmar que acceso.atributo() exista en el tipo de acceso.objeto()
             }
 
             case BINARIA -> {
@@ -62,9 +58,14 @@ public class ValidadorAlcance {
         resolverNombre(id.nombre(), id.linea(), id.columna());
     }
 
-    /** Para casos donde solo se tiene el nombre suelto, como en IncrementoDecremento. */
+    //Para casos donde solo se tiene el nombre suelto, como en IncrementoDecremento.
     public void resolverNombre(String nombre, int linea, int columna) {
         if (tabla.buscarVariable(nombre).isEmpty()) {
+            // Si es una función, no reportar "no declarado". El error real
+            // (asignación a función) lo reporta ValidadorAsignaciones.
+            if (tabla.buscarFuncion(nombre).isPresent()) {
+                return;
+            }
             errores.add(new ErrorSemantico(linea, columna,
                     "Identificador no declarado",
                     "'" + nombre + "' no existe en el ámbito actual"));

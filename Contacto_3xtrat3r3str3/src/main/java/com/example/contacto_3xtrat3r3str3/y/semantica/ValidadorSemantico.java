@@ -15,8 +15,9 @@ public class ValidadorSemantico {
     private final ValidadorDeclaraciones declaraciones = new ValidadorDeclaraciones(tabla, errores);
     private final ValidadorAlcance alcance = new ValidadorAlcance(tabla, errores);
     private final ValidadorTipos tipos = new ValidadorTipos(tabla, errores);
-    private final ValidadorEstructuras estructuras = new ValidadorEstructuras(tabla, errores);
+    private final ValidadorEstructuras estructuras = new ValidadorEstructuras(tabla, errores, tipos);
     private final ValidadorFlujo flujo = new ValidadorFlujo(errores);
+    private final ValidadorAsignaciones asignaciones = new ValidadorAsignaciones(tabla, errores);
 
     private NodoFuncion.Funcion funcionActual;
 
@@ -42,11 +43,21 @@ public class ValidadorSemantico {
         tabla.entrarScope(funcion.nombre());
         declaraciones.declararParametrosEnScope(funcion);
         procesarBloque(funcion.cuerpo());
+        flujo.validarRetornoGarantizado(
+                funcion.tipoRetorno(),
+                funcion.cuerpo(),
+                funcion.linea(),
+                funcion.columna()
+        );
+
         tabla.salirScope();
         funcionActual = null;
     }
 
     private void procesarBloque(List<NodoSentencia> bloque) {
+        // 1. Validar código inalcanzable en este nivel.
+        flujo.validarCodigoInalcanzable(bloque);
+        // 2. Procesar cada sentencia.
         for (NodoSentencia s : bloque) procesarSentencia(s);
     }
 
@@ -59,6 +70,7 @@ public class ValidadorSemantico {
                 tipos.validarInicializacion(d.tipo(), d.inicializacion());
                 // 2. Resolver identificadores dentro del inicializador.
                 alcance.resolverExpresion(d.inicializacion());
+                validarLlamadasEnExpresion(d.inicializacion());
                 // 3. Declarar la variable.
                 declaraciones.declararVariable(d);
             }
@@ -69,6 +81,7 @@ public class ValidadorSemantico {
                 for (var expr : d.inicializacion()) {
                     tipos.validarInicializacion(d.tipo(), expr);
                     alcance.resolverExpresion(expr);
+                    validarLlamadasEnExpresion(expr);
                 }
                 // 2. Declarar el arreglo.
                 declaraciones.declararArreglo(d);
@@ -85,8 +98,11 @@ public class ValidadorSemantico {
                 // 2. Resolver y validar el inicializador si lo hay.
                 for (var expr : d.inicializacion()) {
                     alcance.resolverExpresion(expr);
+                    tipos.tipoDeExpresion(expr);
+                    validarLlamadasEnExpresion(expr);
                 }
                 // 3. Declarar la variable.
+                estructuras.validarInicializacionEstructura(d);
                 declaraciones.declararVariableEstructura(d);
             }
 
@@ -94,6 +110,7 @@ public class ValidadorSemantico {
                 NodoSentencia.Asignacion a = (NodoSentencia.Asignacion) s;
                 alcance.resolverExpresion(a.destino());
                 alcance.resolverExpresion(a.valor());
+                asignaciones.validarDestino(a);
                 validarAsignacion(a);
             }
 
@@ -112,6 +129,7 @@ public class ValidadorSemantico {
             case RETORNO -> {
                 NodoSentencia.Retorno r = (NodoSentencia.Retorno) s;
                 alcance.resolverExpresion(r.valor());
+                tipos.tipoDeExpresion(r.valor());
                 // Validar contra el tipo de retorno de la función actual.
                 String tipoEsperado = funcionActual != null ? funcionActual.tipoRetorno() : null;
                 tipos.validarRetorno(r, tipoEsperado);
@@ -122,6 +140,7 @@ public class ValidadorSemantico {
                 alcance.resolverExpresion(valor);
                 // Validar llamadas dentro de la expresión imprimir.
                 validarLlamadasEnExpresion(valor);
+                tipos.tipoDeExpresion(valor);
             }
 
             case LEER -> { }
@@ -131,9 +150,7 @@ public class ValidadorSemantico {
         }
     }
 
-    // ============================================================
     // VALIDACIONES ESPECIFICAS
-    // ============================================================
 
     private void validarAsignacion(NodoSentencia.Asignacion asignacion) {
         // Resolver el tipo del destino.
@@ -141,16 +158,13 @@ public class ValidadorSemantico {
         String tipoValor = tipos.tipoDeExpresion(asignacion.valor());
 
         if (tipoDestino == null || tipoValor == null) return; // error previo
-
-        // Reusar la lógica de asignabilidad desde ValidadorTipos.
-        // Como 'esAsignable' es private, exponemos una validación pública.
         tipos.validarAsignacion(tipoDestino, tipoValor, asignacion.linea(), asignacion.columna());
     }
 
     private void validarIncrementoDecremento(NodoSentencia.IncrementoDecremento inc) {
         // El identificador debe ser numérico (entero o flotante).
         Optional<TablaSimbolos.SimboloVariable> simbolo = tabla.buscarVariable(inc.nombre());
-        if (simbolo.isEmpty()) return; // ya lo reportó ValidadorAlcance
+        if (simbolo.isEmpty()) return;
 
         String tipo = simbolo.get().tipo();
         if (tipo == null) return;
@@ -185,12 +199,11 @@ public class ValidadorSemantico {
         }
     }
 
-    // ============================================================
     // ESTRUCTURAS DE CONTROL
-    // ============================================================
 
     private void procesarCondicional(NodoSentencia.Condicional c) {
         alcance.resolverExpresion(c.condicion());
+        tipos.tipoDeExpresion(c.condicion());
         tipos.validarCondicionBooleana(c.condicion());
         validarLlamadasEnExpresion(c.condicion());
 
@@ -200,6 +213,7 @@ public class ValidadorSemantico {
 
         if (c.cuerpoSino() != null) {
             alcance.resolverExpresion(c.condicionSino());
+            tipos.tipoDeExpresion(c.condicionSino());
             tipos.validarCondicionBooleana(c.condicionSino());
             validarLlamadasEnExpresion(c.condicionSino());
 
@@ -236,10 +250,14 @@ public class ValidadorSemantico {
     private void procesarCicloPara(NodoSentencia.CicloPara c) {
         tabla.entrarScope("para");
         declaraciones.declararVariableCiclo(c.nombreVariable(), c.tipoInicializacion(), c.linea(), c.columna());
+
         alcance.resolverExpresion(c.valorInicial());
-        alcance.resolverExpresion(c.condicion());
-        tipos.validarCondicionBooleana(c.condicion());
+        tipos.tipoDeExpresion(c.valorInicial());
         validarLlamadasEnExpresion(c.valorInicial());
+
+        alcance.resolverExpresion(c.condicion());
+        tipos.tipoDeExpresion(c.condicion());
+        tipos.validarCondicionBooleana(c.condicion());
         validarLlamadasEnExpresion(c.condicion());
 
         flujo.entrarCiclo();
@@ -250,6 +268,7 @@ public class ValidadorSemantico {
 
     private void procesarCicloMientras(NodoSentencia.CicloMientras c) {
         alcance.resolverExpresion(c.condicion());
+        tipos.tipoDeExpresion(c.condicion());
         tipos.validarCondicionBooleana(c.condicion());
         validarLlamadasEnExpresion(c.condicion());
 
