@@ -22,4 +22,8 @@ public enum Lenguaje {
         }
         return DESCONOCIDO;
     }
+
+    public String getExtension() {
+        return extension;
+    }
 }

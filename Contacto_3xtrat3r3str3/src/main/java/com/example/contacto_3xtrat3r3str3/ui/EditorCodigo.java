@@ -15,6 +15,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
+import java.io.File;
+
 public class EditorCodigo extends HBox {
 
     private final VBox panelNumeros;
@@ -22,6 +24,11 @@ public class EditorCodigo extends HBox {
     private final TextArea areaEdicion;
     private final Font fuente;
     private final ScrollPane scrollPane;
+
+    private File archivoActual;
+    private boolean modificado = false;
+    private boolean cargando = false;
+    private Runnable onModificado;
 
     public EditorCodigo() {
         fuente = Font.font("Consolas", 14);
@@ -38,67 +45,57 @@ public class EditorCodigo extends HBox {
         capaTexto.setPadding(new Insets(8));
         capaTexto.setMouseTransparent(true);
         capaTexto.setFocusTraversable(false);
-        // Color de letra visible y fondo blanco explícito
         capaTexto.setStyle("-fx-background-color: white;");
 
-        // --- Capa editable (TextArea transparente) ---
+// --- Capa editable (TextArea) ---
         areaEdicion = new TextArea();
         areaEdicion.setFont(fuente);
         areaEdicion.setPadding(new Insets(8));
         areaEdicion.setWrapText(false);
         areaEdicion.setStyle(
-                "-fx-text-fill: #2E3A45;" + // Color de texto real pero transparente si se prefiere sobre el TextFlow
+                "-fx-text-fill: transparent;" + // <-- CAMBIO CLAVE: Debe ser transparente para ver el TextFlow de abajo
                         "-fx-background-color: transparent;" +
                         "-fx-control-inner-background: transparent;" +
                         "-fx-highlight-fill: rgba(0,120,215,0.35);" +
-                        "-fx-highlight-text-fill: black;" +
+                        "-fx-highlight-text-fill: transparent;" + // <-- También transparente para que al seleccionar no parpee texto duplicado
                         "-fx-background-insets: 0;"
         );
-
-        // StackPane que superpone TextFlow y TextArea para que compartan espacio exacto
         StackPane capaEdicion = new StackPane(capaTexto, areaEdicion);
         HBox.setHgrow(capaEdicion, Priority.ALWAYS);
 
-        // Contenedor horizontal interno (Números + Área de edición)
         HBox contenedorInterno = new HBox(panelNumeros, capaEdicion);
         HBox.setHgrow(capaEdicion, Priority.ALWAYS);
 
-        // --- ScrollPane que envuelve todo para dar scroll global y evitar desbordes ---
         scrollPane = new ScrollPane(contenedorInterno);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
         scrollPane.setStyle("-fx-background-color: white; -fx-box-border: transparent;");
 
-        // Hacemos que el ScrollPane ocupe todo el espacio del HBox principal
         getChildren().add(scrollPane);
         HBox.setHgrow(scrollPane, Priority.ALWAYS);
 
-        // Sincronizar el scroll vertical del panel de números con el texto si fuera necesario,
-        // o dejar que el ScrollPane general mueva ambos al estar dentro del mismo contenido.
-        panelNumeros.translateYProperty().bind(scrollPane.vvalueProperty().multiply(0)); // Opcional si scroller los mueve juntos
-
-        // Sincronizar texto y números de línea al escribir
+        // --- Listener único ---
         areaEdicion.textProperty().addListener((obs, viejo, nuevo) -> {
             actualizarTexto(nuevo);
             actualizarNumerosLinea(nuevo);
+            if (!cargando && !modificado) {
+                modificado = true;
+                if (onModificado != null) onModificado.run();
+            }
         });
 
-        // Foco inicial
         Platform.runLater(areaEdicion::requestFocus);
 
-        // Estado inicial
         actualizarTexto("");
         actualizarNumerosLinea("");
     }
 
     private void actualizarTexto(String texto) {
         capaTexto.getChildren().clear();
-        // Si el texto termina en salto de línea, TextFlow a veces ignora la última línea vacía visualmente,
-        // por lo que agregamos un caracter o manejamos el texto de forma segura.
         String textoSeguro = texto.endsWith("\n") ? texto + " " : texto;
         Text t = new Text(textoSeguro);
         t.setFont(fuente);
-        t.setFill(javafx.scene.paint.Color.valueOf("#2E3A45")); // Color oscuro legible
+        t.setFill(javafx.scene.paint.Color.valueOf("#2E3A45"));
         capaTexto.getChildren().add(t);
     }
 
@@ -113,15 +110,32 @@ public class EditorCodigo extends HBox {
         }
     }
 
-    public TextArea getAreaEdicion() {
-        return areaEdicion;
+    // ---------- API ----------
+
+    public TextArea getAreaEdicion() { return areaEdicion; }
+
+    public String getTexto() { return areaEdicion.getText(); }
+
+    public void setTexto(String texto) { areaEdicion.setText(texto); }
+
+    public void setOnModificado(Runnable r) { this.onModificado = r; }
+
+    public File getArchivoActual() { return archivoActual; }
+
+    public void setArchivoActual(File f) {
+        this.archivoActual = f;
+        this.modificado = false;
     }
 
-    public String getTexto() {
-        return areaEdicion.getText();
-    }
+    public boolean estaModificado() { return modificado; }
 
-    public void setTexto(String texto) {
-        areaEdicion.setText(texto);
+    public void marcarComoGuardado() { this.modificado = false; }
+
+    public void cargarContenido(String contenido, File archivo) {
+        cargando = true;
+        areaEdicion.setText(contenido);
+        cargando = false;
+        this.archivoActual = archivo;
+        this.modificado = false;
     }
 }
