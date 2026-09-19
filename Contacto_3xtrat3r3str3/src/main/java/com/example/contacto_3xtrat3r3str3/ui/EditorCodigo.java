@@ -1,5 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
+import com.example.contacto_3xtrat3r3str3.ui.modelo.Lenguaje;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -17,7 +18,6 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 import java.io.File;
-import java.nio.file.Files;
 
 public class EditorCodigo extends HBox {
 
@@ -27,27 +27,33 @@ public class EditorCodigo extends HBox {
     private final Font fuente;
     private final ScrollPane scrollPane;
     private File archivoActual;
+    private Lenguaje lenguaje = Lenguaje.DESCONOCIDO;
     private boolean modificado = false;
     private Runnable onModificado;
 
     public EditorCodigo() {
+        this(Lenguaje.DESCONOCIDO);
+    }
+
+    public EditorCodigo(Lenguaje lenguajeInicial) {
+        if (lenguajeInicial != null) {
+            this.lenguaje = lenguajeInicial;
+        }
+
         fuente = Font.font("Consolas", 14);
 
-        // --- Panel de números de línea ---
         panelNumeros = new VBox();
         panelNumeros.setPadding(new Insets(8, 10, 8, 8));
         panelNumeros.setAlignment(Pos.TOP_RIGHT);
         panelNumeros.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;");
         panelNumeros.setMinWidth(Region.USE_PREF_SIZE);
 
-        // --- Capa de texto visible (TextFlow) ---
         capaTexto = new TextFlow();
         capaTexto.setPadding(new Insets(8));
         capaTexto.setMouseTransparent(true);
         capaTexto.setFocusTraversable(false);
         capaTexto.setStyle("-fx-background-color: transparent;");
 
-        // --- Capa editable (TextArea transparente) ---
         areaEdicion = new TextArea();
         areaEdicion.setFont(fuente);
         areaEdicion.setWrapText(false);
@@ -62,7 +68,6 @@ public class EditorCodigo extends HBox {
                         "-fx-border-color: transparent;"
         );
 
-        // StackPane: TextArea abajo para recibir eventos y TextFlow arriba para mostrar el texto sin bloqueos
         StackPane capaEdicion = new StackPane(areaEdicion, capaTexto);
         HBox.setHgrow(capaEdicion, Priority.ALWAYS);
 
@@ -77,7 +82,6 @@ public class EditorCodigo extends HBox {
         getChildren().add(scrollPane);
         HBox.setHgrow(scrollPane, Priority.ALWAYS);
 
-        // Sincronizar texto y números de línea al escribir
         areaEdicion.textProperty().addListener((obs, viejo, nuevo) -> {
             actualizarTexto(nuevo);
             actualizarNumerosLinea(nuevo);
@@ -107,7 +111,6 @@ public class EditorCodigo extends HBox {
         for (int i = 1; i <= lineas; i++) {
             Label l = new Label(String.valueOf(i));
             l.setFont(fuente);
-            // CORRECCIÓN: Eliminamos el padding por defecto del Label y forzamos una altura exacta de línea
             l.setStyle("-fx-text-fill: #888; -fx-padding: 0;");
             l.setMinHeight(19.01); // Altura exacta estimada modificar para ajustar las lineas y los numeros
             l.setPrefHeight(19.01);
@@ -116,8 +119,16 @@ public class EditorCodigo extends HBox {
         }
     }
 
+    // ---------- API ----------
+
     public void cargarContenido(String contenido, File archivo) {
         this.archivoActual = archivo;
+        if (archivo != null) {
+            Lenguaje detectado = Lenguaje.porExtension(archivo.getName());
+            if (detectado.esConocido()) {
+                this.lenguaje = detectado;
+            }
+        }
         areaEdicion.setText(contenido);
         modificado = false;
     }
@@ -136,6 +147,22 @@ public class EditorCodigo extends HBox {
 
     public void setArchivoActual(File archivoActual) {
         this.archivoActual = archivoActual;
+        if (archivoActual != null) {
+            Lenguaje detectado = Lenguaje.porExtension(archivoActual.getName());
+            if (detectado.esConocido()) {
+                this.lenguaje = detectado;
+            }
+        }
+    }
+
+    public Lenguaje getLenguaje() {
+        return lenguaje;
+    }
+
+    public void setLenguaje(Lenguaje lenguaje) {
+        if (lenguaje != null) {
+            this.lenguaje = lenguaje;
+        }
     }
 
     public void setOnModificado(Runnable callback) {
@@ -152,5 +179,9 @@ public class EditorCodigo extends HBox {
 
     public void setTexto(String texto) {
         areaEdicion.setText(texto);
+    }
+
+    public void pedirFoco() {
+        Platform.runLater(areaEdicion::requestFocus);
     }
 }

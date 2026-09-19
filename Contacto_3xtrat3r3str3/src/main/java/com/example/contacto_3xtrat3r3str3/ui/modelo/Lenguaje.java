@@ -23,7 +23,7 @@ public enum Lenguaje {
         return DESCONOCIDO;
     }
 
-    public String getExtension() {
-        return extension;
-    }
+    public String getNombreVisible() { return nombreVisible; }
+    public String getExtension() { return extension; }
+    public boolean esConocido() { return this != DESCONOCIDO; }
 }

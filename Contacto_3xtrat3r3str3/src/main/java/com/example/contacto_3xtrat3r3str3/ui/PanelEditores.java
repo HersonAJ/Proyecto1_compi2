@@ -18,11 +18,12 @@ public class PanelEditores extends TabPane {
     }
 
     public EditorCodigo abrirArchivo(File archivo, String contenido) {
-        // Si ya está abierto, lo seleccionamos
         Tab existente = tabsPorArchivo.get(archivo);
         if (existente != null) {
             getSelectionModel().select(existente);
-            return (EditorCodigo) existente.getUserData();
+            EditorCodigo ed = (EditorCodigo) existente.getUserData();
+            ed.pedirFoco();
+            return ed;
         }
 
         EditorCodigo editor = new EditorCodigo();
@@ -30,21 +31,14 @@ public class PanelEditores extends TabPane {
 
         Tab tab = new Tab(archivo.getName(), editor);
         tab.setUserData(editor);
-
-        // Referencia directa y limpia a la pestaña creada
         editor.setOnModificado(() -> marcarModificado(tab));
 
-        tab.setOnCloseRequest(e -> {
-            if (editor.estaModificado()) {
-                // Aquí podrías preguntar "¿guardar cambios?"
-                // Por ahora solo dejamos cerrar.
-            }
-            tabsPorArchivo.remove(archivo);
-        });
+        tab.setOnCloseRequest(e -> tabsPorArchivo.remove(archivo));
 
         tabsPorArchivo.put(archivo, tab);
         getTabs().add(tab);
         getSelectionModel().select(tab);
+        editor.pedirFoco();
         return editor;
     }
 
@@ -58,15 +52,18 @@ public class PanelEditores extends TabPane {
     public Optional<EditorCodigo> editorActivo() {
         Tab t = getSelectionModel().getSelectedItem();
         if (t == null) return Optional.empty();
-        return Optional.of((EditorCodigo) t.getUserData());
+        Object data = t.getUserData();
+        if (data instanceof EditorCodigo) {
+            return Optional.of((EditorCodigo) data);
+        }
+        return Optional.empty();
     }
 
     public void marcarGuardado(EditorCodigo editor) {
         editor.marcarComoGuardado();
         for (Tab t : getTabs()) {
             if (t.getUserData() == editor) {
-                String nombre = t.getText().replaceFirst("^\\* ", "");
-                t.setText(nombre);
+                t.setText(t.getText().replaceFirst("^\\* ", ""));
                 break;
             }
         }
@@ -77,30 +74,30 @@ public class PanelEditores extends TabPane {
         if (t != null) getTabs().remove(t);
     }
 
-    public void nuevoArchivoVacio(Lenguaje lenguaje) {
-        EditorCodigo nuevoEditor = new EditorCodigo();
+    public EditorCodigo nuevoArchivoVacio(Lenguaje lenguaje) {
+        EditorCodigo nuevoEditor = new EditorCodigo(lenguaje);
 
-        // Si el lenguaje por alguna razón viene nulo, evitamos el fallo usando ".y" por defecto
-        String ext = (lenguaje != null) ? lenguaje.getExtension() : ".y";
+        String ext = (lenguaje != null && lenguaje.esConocido())
+                ? lenguaje.getExtension()
+                : ".y";
         String nombreSugerido = "nuevo" + ext;
 
-        // CORRECCIÓN: Pasar el editor directamente en el constructor de la Tab, igual que en abrirArchivo
         Tab nuevaPestana = new Tab(nombreSugerido, nuevoEditor);
         nuevaPestana.setUserData(nuevoEditor);
-
-        // CORRECCIÓN: Conectar también el listener de modificado para que el asterisco (*) funcione en archivos nuevos
         nuevoEditor.setOnModificado(() -> marcarModificado(nuevaPestana));
 
         getTabs().add(nuevaPestana);
         getSelectionModel().select(nuevaPestana);
-    } void actualizarArchivoGuardado(EditorCodigo editor, File nuevoArchivo) {
+        nuevoEditor.pedirFoco();
+        return nuevoEditor;
+    }
+
+    public void actualizarArchivoGuardado(EditorCodigo editor, File nuevoArchivo) {
         editor.marcarComoGuardado();
+        editor.setArchivoActual(nuevoArchivo);
         for (Tab t : getTabs()) {
             if (t.getUserData() == editor) {
-                // 1. Cambiamos el texto de la pestaña por el nombre real del archivo
                 t.setText(nuevoArchivo.getName());
-
-                // 2. Registramos el archivo en el mapa para futuras referencias (evita duplicados si se vuelve a abrir)
                 tabsPorArchivo.put(nuevoArchivo, t);
                 break;
             }

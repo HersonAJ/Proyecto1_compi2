@@ -27,41 +27,53 @@ public class MenuPrincipal {
     public MenuPrincipal(Stage stage) {
         barra = new MenuBar();
 
+        // -------- Archivo --------
         Menu archivo = new Menu("Archivo");
         archivo.getItems().addAll(
-                item("Nuevo archivo",    () -> ejecutar(onNuevoArchivo)),
-                item("Abrir archivo...", () -> ejecutar(onAbrirArchivo)),
-                item("Abrir carpeta...", () -> ejecutar(onAbrirCarpeta)),
+                item("Nuevo archivo",         () -> ejecutar(onNuevoArchivo)),
+                item("Abrir archivo...",      () -> ejecutar(onAbrirArchivo)),
+                item("Abrir carpeta...",      () -> ejecutar(onAbrirCarpeta)),
                 new SeparatorMenuItem(),
-                item("Guardar",          () -> ejecutar(onGuardar)),
-                item("Guardar como...",  () -> ejecutar(onGuardarComo)),
+                item("Guardar",               () -> ejecutar(onGuardar)),
+                item("Guardar como...",       () -> ejecutar(onGuardarComo)),
                 new SeparatorMenuItem(),
-                item("Descargar archivo...", () -> ejecutar(onDescargarArchivo)),
-                item("Descargar carpeta...", () -> ejecutar(onDescargarCarpeta)),
+                item("Descargar archivo...",  () -> ejecutar(onDescargarArchivo)),
+                item("Descargar carpeta...",  () -> ejecutar(onDescargarCarpeta)),
                 new SeparatorMenuItem(),
-                item("Salir", () -> { if (onSalir != null) onSalir.run(); else stage.close(); })
+                item("Salir",                 () -> {
+                    if (onSalir != null) onSalir.run();
+                    else stage.close();
+                })
         );
 
+        // -------- Editar --------
         Menu editar = new Menu("Editar");
         editar.getItems().addAll(
-                item("Deshacer", null), item("Rehacer", null),
+                item("Deshacer", null),
+                item("Rehacer",  null),
                 new SeparatorMenuItem(),
-                item("Cortar", null), item("Copiar", null), item("Pegar", null)
+                item("Cortar",   null),
+                item("Copiar",   null),
+                item("Pegar",    null)
         );
 
+        // -------- Ejecutar --------
         Menu ejecutar = new Menu("Ejecutar");
         ejecutar.getItems().addAll(
                 item("Compilar",          () -> ejecutar(onCompilar)),
+                new SeparatorMenuItem(),
                 item("Generar cuartetas", () -> ejecutar(onGenerarCuartetas)),
                 item("Generar C3D",       () -> ejecutar(onGenerarC3D)),
                 item("Traducir a C",      () -> ejecutar(onTraducirAC))
         );
 
+        // -------- Ayuda --------
         Menu ayuda = new Menu("Ayuda");
         ayuda.getItems().addAll(
-                item("Manual de usuario", null),
+                item("Manual de usuario",     null),
                 item("Documentación técnica", null),
-                item("Acerca de...", null)
+                new SeparatorMenuItem(),
+                item("Acerca de...",          null)
         );
 
         barra.getMenus().addAll(archivo, editar, ejecutar, ayuda);
