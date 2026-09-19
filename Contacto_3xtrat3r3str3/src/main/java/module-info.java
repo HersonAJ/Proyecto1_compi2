@@ -10,6 +10,7 @@ module com.example.contacto_3xtrat3r3str3 {
     requires org.kordamp.bootstrapfx.core;
     requires eu.hansolo.tilesfx;
     requires org.antlr.antlr4.runtime;
+    requires org.fxmisc.richtext;
 
     opens com.example.contacto_3xtrat3r3str3.ui to javafx.graphics, javafx.fxml;
 

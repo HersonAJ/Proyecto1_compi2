@@ -44,28 +44,42 @@ public class PanelSalida extends TabPane {
     private TextArea crearAreaTerminal() {
         TextArea area = new TextArea();
         area.setEditable(false);
+        area.setWrapText(false);
         area.setFont(Font.font("Consolas", 13));
+
+        // Estilo principal del TextArea
         area.setStyle(
                 "-fx-control-inner-background: #1e1e1e;" +
                         "-fx-background-color: #1e1e1e;" +
                         "-fx-text-fill: #d4d4d4;" +
+                        "-fx-prompt-text-fill: #888888;" +
                         "-fx-highlight-fill: #264f78;" +
                         "-fx-highlight-text-fill: #ffffff;" +
                         "-fx-border-color: transparent;" +
                         "-fx-focus-color: transparent;" +
                         "-fx-faint-focus-color: transparent;"
         );
-        // Forzar fondos oscuros también en las capas internas del TextArea
-        area.lookupAll(".content").forEach(n ->
-                n.setStyle("-fx-background-color: #1e1e1e;"));
-        area.skinProperty().addListener((obs, viejo, nuevo) -> {
-            area.lookupAll(".content").forEach(n ->
-                    n.setStyle("-fx-background-color: #1e1e1e;"));
-            area.lookupAll(".scroll-pane").forEach(n ->
-                    n.setStyle("-fx-background-color: #1e1e1e;"));
-            area.lookupAll(".viewport").forEach(n ->
-                    n.setStyle("-fx-background-color: #1e1e1e;"));
-        });
+
+        // Aplicar los colores a las capas internas
+        Runnable aplicarEstilos = () -> {
+
+            area.lookupAll(".content").forEach(n -> n.setStyle("-fx-background-color: #1e1e1e;"));
+            area.lookupAll(".text").forEach(n -> n.setStyle("-fx-fill: #d4d4d4;"));
+            area.lookupAll(".scroll-pane").forEach(n -> n.setStyle("-fx-background-color: #1e1e1e;"));
+            area.lookupAll(".viewport").forEach(n -> n.setStyle("-fx-background-color: #1e1e1e;"));
+        };
+
+        area.skinProperty().addListener((obs, viejo, nuevo) -> aplicarEstilos.run());
+        area.sceneProperty().addListener(
+                (obs, vieja, nueva) -> {
+                    if (nueva != null) {
+                        javafx.application.Platform.runLater(
+                                aplicarEstilos
+                        );
+                    }
+                }
+        );
+
         return area;
     }
 
