@@ -1,6 +1,10 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
 import com.example.contacto_3xtrat3r3str3.ui.modelo.Lenguaje;
+import com.example.contacto_3xtrat3r3str3.y.errores.ErrorPosicional;
+import com.example.contacto_3xtrat3r3str3.y.errores.ResultadoCompilacionY;
+import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
+import com.example.contacto_3xtrat3r3str3.y.service.ServicioCompilacionY;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
@@ -22,6 +26,7 @@ public class VentanaPrincipal {
     private final PanelEditores panelEditores;
     private final MenuPrincipal menu;
     private final PanelSalida panelSalida;
+    private final ServicioCompilacionY servicioY = new ServicioCompilacionY();
 
     public VentanaPrincipal(Stage stage) {
         this.stage = stage;
@@ -128,7 +133,8 @@ public class VentanaPrincipal {
             panelEditores.marcarGuardado(editor);
             panelSalida.imprimirConsola("Guardado: " + archivo.getAbsolutePath());
         } else {
-            panelSalida.imprimirError("No se pudo guardar el archivo.");
+            panelSalida.agregarError("UI",-1, -1,"No se pudo guardar el archivo.");
+            panelSalida.enfocarErrores();
         }
         arbol.refrescar();
     }
@@ -180,7 +186,8 @@ public class VentanaPrincipal {
                 panelSalida.imprimirConsola("Guardado como: " + destino.getAbsolutePath());
                 arbol.refrescar();
             } else {
-                panelSalida.imprimirError("No se pudo guardar el archivo.");
+                panelSalida.agregarError("UI",-1, -1,"No se pudo guardar el archivo.");
+                panelSalida.enfocarErrores();
             }
         }
     }
@@ -230,28 +237,60 @@ public class VentanaPrincipal {
     private void accionCompilar() {
         Optional<EditorCodigo> editorOpt = panelEditores.editorActivo();
         if (editorOpt.isEmpty()) {
-            panelSalida.imprimirError("No hay pestaña activa.");
+            panelSalida.agregarError("UI", -1 ,-1, "No hay pestaña activa.");
+            panelSalida.enfocarErrores();
             return;
         }
         EditorCodigo editor = editorOpt.get();
 
         if (editor.getArchivoActual() == null) {
-            panelSalida.imprimirError("El archivo no está guardado. Guárdalo (Ctrl+S) antes de analizar.");
+            panelSalida.agregarError("UI", -1, -1,"El archivo no está guardado. Guárdalo (Ctrl+S) antes de analizar.");
+            panelSalida.enfocarErrores();
             return;
         }
 
         Lenguaje lenguaje = editor.getLenguaje();
         if (!lenguaje.esConocido()) {
-            panelSalida.imprimirError("No se pudo determinar el lenguaje del archivo.");
+            panelSalida.agregarError("UI", -1, -1,"No se pudo determinar el lenguaje del archivo.");
+            panelSalida.enfocarErrores();
             return;
         }
 
-        String texto = editor.getTexto();
-        panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName()
-                + " como " + lenguaje.getNombreVisible()
-                + " (" + texto.length() + " caracteres)");
+        panelSalida.limpiarTodo();
 
-        // Aquí irá el pipeline ANTLR.
+        if (lenguaje == Lenguaje.Y) {
+            compilarY(editor);
+        } else {
+            panelSalida.agregarError("UI", -1, -1,"Aún no hay compilador para " + lenguaje.getNombreVisible() + ".");
+            panelSalida.enfocarErrores();
+        }
+    }
+
+    private void compilarY(EditorCodigo editor) {
+        panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como Y?");
+
+        ResultadoCompilacionY resultado = servicioY.analizar(editor.getTexto());
+
+        for (ErrorPosicional e : resultado.getErroresLexicos()) {
+            panelSalida.agregarError("Léxico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorPosicional e : resultado.getErroresSintacticos()) {
+            panelSalida.agregarError("Sintáctico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorSemantico e : resultado.getErroresSemanticos()) {
+            panelSalida.agregarError(e.categoria(), e.linea(), e.columna(), e.mensaje());
+        }
+        for (String e : resultado.getMensajesInternos()) {
+            panelSalida.agregarError("Interno", -1, -1, e);
+        }
+
+        if (resultado.isExitoso()) {
+            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+        } else {
+            panelSalida.imprimirConsola(
+                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.enfocarErrores();
+        }
     }
 
     private static Region placeholder(String texto) {
