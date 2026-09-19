@@ -84,14 +84,16 @@ public class PanelEditores extends TabPane {
         String ext = (lenguaje != null) ? lenguaje.getExtension() : ".y";
         String nombreSugerido = "nuevo" + ext;
 
-        Tab nuevaPestana = new Tab(nombreSugerido);
-        nuevaPestana.setContent(nuevoEditor);
+        // CORRECCIÓN: Pasar el editor directamente en el constructor de la Tab, igual que en abrirArchivo
+        Tab nuevaPestana = new Tab(nombreSugerido, nuevoEditor);
         nuevaPestana.setUserData(nuevoEditor);
+
+        // CORRECCIÓN: Conectar también el listener de modificado para que el asterisco (*) funcione en archivos nuevos
+        nuevoEditor.setOnModificado(() -> marcarModificado(nuevaPestana));
 
         getTabs().add(nuevaPestana);
         getSelectionModel().select(nuevaPestana);
-    }
-    public void actualizarArchivoGuardado(EditorCodigo editor, File nuevoArchivo) {
+    } void actualizarArchivoGuardado(EditorCodigo editor, File nuevoArchivo) {
         editor.marcarComoGuardado();
         for (Tab t : getTabs()) {
             if (t.getUserData() == editor) {

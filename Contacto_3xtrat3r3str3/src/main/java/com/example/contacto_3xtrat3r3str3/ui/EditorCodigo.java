@@ -11,11 +11,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 import java.io.File;
+import java.nio.file.Files;
 
 public class EditorCodigo extends HBox {
 
@@ -24,10 +26,8 @@ public class EditorCodigo extends HBox {
     private final TextArea areaEdicion;
     private final Font fuente;
     private final ScrollPane scrollPane;
-
     private File archivoActual;
     private boolean modificado = false;
-    private boolean cargando = false;
     private Runnable onModificado;
 
     public EditorCodigo() {
@@ -45,22 +45,25 @@ public class EditorCodigo extends HBox {
         capaTexto.setPadding(new Insets(8));
         capaTexto.setMouseTransparent(true);
         capaTexto.setFocusTraversable(false);
-        capaTexto.setStyle("-fx-background-color: white;");
+        capaTexto.setStyle("-fx-background-color: transparent;");
 
-// --- Capa editable (TextArea) ---
+        // --- Capa editable (TextArea transparente) ---
         areaEdicion = new TextArea();
         areaEdicion.setFont(fuente);
-        areaEdicion.setPadding(new Insets(8));
         areaEdicion.setWrapText(false);
         areaEdicion.setStyle(
-                "-fx-text-fill: transparent;" + // <-- CAMBIO CLAVE: Debe ser transparente para ver el TextFlow de abajo
+                "-fx-text-fill: transparent;" +
                         "-fx-background-color: transparent;" +
                         "-fx-control-inner-background: transparent;" +
                         "-fx-highlight-fill: rgba(0,120,215,0.35);" +
-                        "-fx-highlight-text-fill: transparent;" + // <-- También transparente para que al seleccionar no parpee texto duplicado
-                        "-fx-background-insets: 0;"
+                        "-fx-highlight-text-fill: transparent;" +
+                        "-fx-background-insets: 0;" +
+                        "-fx-padding: 8;" +
+                        "-fx-border-color: transparent;"
         );
-        StackPane capaEdicion = new StackPane(capaTexto, areaEdicion);
+
+        // StackPane: TextArea abajo para recibir eventos y TextFlow arriba para mostrar el texto sin bloqueos
+        StackPane capaEdicion = new StackPane(areaEdicion, capaTexto);
         HBox.setHgrow(capaEdicion, Priority.ALWAYS);
 
         HBox contenedorInterno = new HBox(panelNumeros, capaEdicion);
@@ -74,18 +77,17 @@ public class EditorCodigo extends HBox {
         getChildren().add(scrollPane);
         HBox.setHgrow(scrollPane, Priority.ALWAYS);
 
-        // --- Listener único ---
+        // Sincronizar texto y números de línea al escribir
         areaEdicion.textProperty().addListener((obs, viejo, nuevo) -> {
             actualizarTexto(nuevo);
             actualizarNumerosLinea(nuevo);
-            if (!cargando && !modificado) {
+            if (!modificado) {
                 modificado = true;
                 if (onModificado != null) onModificado.run();
             }
         });
 
         Platform.runLater(areaEdicion::requestFocus);
-
         actualizarTexto("");
         actualizarNumerosLinea("");
     }
@@ -95,7 +97,7 @@ public class EditorCodigo extends HBox {
         String textoSeguro = texto.endsWith("\n") ? texto + " " : texto;
         Text t = new Text(textoSeguro);
         t.setFont(fuente);
-        t.setFill(javafx.scene.paint.Color.valueOf("#2E3A45"));
+        t.setFill(Color.valueOf("#2E3A45"));
         capaTexto.getChildren().add(t);
     }
 
@@ -105,37 +107,46 @@ public class EditorCodigo extends HBox {
         for (int i = 1; i <= lineas; i++) {
             Label l = new Label(String.valueOf(i));
             l.setFont(fuente);
-            l.setStyle("-fx-text-fill: #888; -fx-padding: 0 4 0 0;");
+            l.setStyle("-fx-text-fill: #888;");
             panelNumeros.getChildren().add(l);
         }
     }
 
-    // ---------- API ----------
+    public void cargarContenido(String contenido, File archivo) {
+        this.archivoActual = archivo;
+        areaEdicion.setText(contenido);
+        modificado = false;
+    }
 
-    public TextArea getAreaEdicion() { return areaEdicion; }
-
-    public String getTexto() { return areaEdicion.getText(); }
-
-    public void setTexto(String texto) { areaEdicion.setText(texto); }
-
-    public void setOnModificado(Runnable r) { this.onModificado = r; }
-
-    public File getArchivoActual() { return archivoActual; }
-
-    public void setArchivoActual(File f) {
-        this.archivoActual = f;
+    public void marcarComoGuardado() {
         this.modificado = false;
     }
 
-    public boolean estaModificado() { return modificado; }
+    public boolean estaModificado() {
+        return modificado;
+    }
 
-    public void marcarComoGuardado() { this.modificado = false; }
+    public File getArchivoActual() {
+        return archivoActual;
+    }
 
-    public void cargarContenido(String contenido, File archivo) {
-        cargando = true;
-        areaEdicion.setText(contenido);
-        cargando = false;
-        this.archivoActual = archivo;
-        this.modificado = false;
+    public void setArchivoActual(File archivoActual) {
+        this.archivoActual = archivoActual;
+    }
+
+    public void setOnModificado(Runnable callback) {
+        this.onModificado = callback;
+    }
+
+    public TextArea getAreaEdicion() {
+        return areaEdicion;
+    }
+
+    public String getTexto() {
+        return areaEdicion.getText();
+    }
+
+    public void setTexto(String texto) {
+        areaEdicion.setText(texto);
     }
 }
