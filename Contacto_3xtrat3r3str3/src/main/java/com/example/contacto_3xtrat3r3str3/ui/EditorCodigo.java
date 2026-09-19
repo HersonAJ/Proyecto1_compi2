@@ -107,7 +107,11 @@ public class EditorCodigo extends HBox {
         for (int i = 1; i <= lineas; i++) {
             Label l = new Label(String.valueOf(i));
             l.setFont(fuente);
-            l.setStyle("-fx-text-fill: #888;");
+            // CORRECCIÓN: Eliminamos el padding por defecto del Label y forzamos una altura exacta de línea
+            l.setStyle("-fx-text-fill: #888; -fx-padding: 0;");
+            l.setMinHeight(19.01); // Altura exacta estimada modificar para ajustar las lineas y los numeros
+            l.setPrefHeight(19.01);
+            l.setAlignment(Pos.TOP_RIGHT);
             panelNumeros.getChildren().add(l);
         }
     }
