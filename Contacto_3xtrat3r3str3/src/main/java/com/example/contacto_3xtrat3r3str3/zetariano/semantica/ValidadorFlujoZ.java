@@ -25,7 +25,7 @@ public class ValidadorFlujoZ {
     public void validarRomper(NodoSentencia.Romper r) {
         if (nivelCiclo == 0 && nivelSwitch == 0) {
             errores.add(new ErrorSemantico(r.linea(), r.columna(), "Flujo invalido",
-                    "'breal' usado fuera de un ciclo o de un switch"));
+                    "'break' usado fuera de un ciclo o de un switch"));
         }
     }
 

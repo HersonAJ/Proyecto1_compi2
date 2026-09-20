@@ -48,8 +48,7 @@ public class ValidadorTiposZ {
             case LITERAL_BOOL -> new TipoResuelto(BOOLEAN, 0);
             case LITERAL_NULO -> new TipoResuelto(NULO, 0);
 
-            //el tipo real de una lista literal depende del contexto (ver validarInicializacion);
-            //aqui no hay suficiente informacion para resolverlo de forma aislada
+            //el tipo real de una lista literal depende del contexto
             case LISTA_LITERAL -> null;
 
             case IDENTIFICADOR -> {
@@ -79,7 +78,14 @@ public class ValidadorTiposZ {
             case ACCESO_ATRIBUTO -> {
                 NodoExpr.AccesoAtributo acceso = (NodoExpr.AccesoAtributo) expr;
                 TipoResuelto tipoObjeto = tipoDeExpresion(acceso.objeto());
-                if (tipoObjeto == null || !tipoObjeto.base().equals(tabla.getNombreClase())) yield null;
+                if (tipoObjeto == null) yield null; //ya reportado en otro lado
+
+                if (!tipoObjeto.base().equals(tabla.getNombreClase())) {
+                    errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
+                            "Acceso invalido",
+                            "No se puede acceder a '" + acceso.atributo() + "' porque '" + tipoObjeto.base() + "' no es un objeto"));
+                    yield null;
+                }
 
                 Optional<TablaSimbolosZ.SimboloAtributo> atributo = tabla.buscarAtributo(acceso.atributo());
                 if (atributo.isEmpty()) {
@@ -155,7 +161,7 @@ public class ValidadorTiposZ {
                 NodoExpr.LlamadaFuncion llamada = (NodoExpr.LlamadaFuncion) expr;
                 List<TipoResuelto> tiposArgs = llamada.argumentos().stream().map(this::tipoDeExpresion).toList();
                 TablaSimbolosZ.Firma firma = resolverSobrecarga(tabla.getMetodos(llamada.nombre()), tiposArgs,
-                        llamada.linea(), llamada.columna(), llamada.nombre());
+                        llamada.linea(), llamada.columna(), llamada.nombre(), "Metodo");
                 yield firma == null || firma.tipoRetorno() == null ? null : new TipoResuelto(firma.tipoRetorno(), 0);
             }
 
@@ -163,10 +169,17 @@ public class ValidadorTiposZ {
                 NodoExpr.LlamadaMetodo llamada = (NodoExpr.LlamadaMetodo) expr;
                 TipoResuelto tipoObjeto = tipoDeExpresion(llamada.objeto());
                 List<TipoResuelto> tiposArgs = llamada.argumentos().stream().map(this::tipoDeExpresion).toList();
-                if (tipoObjeto == null || !tipoObjeto.base().equals(tabla.getNombreClase())) yield null;
+                if (tipoObjeto == null) yield null; //ya reportado en otro lado
+
+                if (!tipoObjeto.base().equals(tabla.getNombreClase())) {
+                    errores.add(new ErrorSemantico(llamada.linea(), llamada.columna(),
+                            "Acceso invalido",
+                            "No se puede llamar a '" + llamada.nombre() + "' porque '" + tipoObjeto.base() + "' no es un objeto"));
+                    yield null;
+                }
 
                 TablaSimbolosZ.Firma firma = resolverSobrecarga(tabla.getMetodos(llamada.nombre()), tiposArgs,
-                        llamada.linea(), llamada.columna(), llamada.nombre());
+                        llamada.linea(), llamada.columna(), llamada.nombre(), "Metodo");
                 yield firma == null || firma.tipoRetorno() == null ? null : new TipoResuelto(firma.tipoRetorno(), 0);
             }
 
@@ -176,7 +189,7 @@ public class ValidadorTiposZ {
 
                 List<TipoResuelto> tiposArgs = instancia.argumentos().stream().map(this::tipoDeExpresion).toList();
                 resolverSobrecarga(tabla.getConstructores(instancia.tipoClase()), tiposArgs,
-                        instancia.linea(), instancia.columna(), instancia.tipoClase());
+                        instancia.linea(), instancia.columna(), instancia.tipoClase(), "Constructor");
                 yield new TipoResuelto(instancia.tipoClase(), 0);
             }
 
@@ -329,9 +342,14 @@ public class ValidadorTiposZ {
 
     // RESOLUCION DE SOBRECARGA
     private TablaSimbolosZ.Firma resolverSobrecarga(List<TablaSimbolosZ.Firma> firmas, List<TipoResuelto> tiposArgs,
-                                                    int linea, int columna, String nombre) {
-        if (firmas.isEmpty()) return null;
+                                                    int linea, int columna, String nombre, String tipoElemento) {
+        if (firmas.isEmpty()) {
+            errores.add(new ErrorSemantico(linea, columna,
+                    tipoElemento + " no declarado", "'" + nombre + "' no existe"));
+            return null;
+        }
         if (tiposArgs.stream().anyMatch(java.util.Objects::isNull)) return null;
+
         //1. intento de coincidencia exacta
         for (TablaSimbolosZ.Firma f : firmas) {
             if (coincideExacto(f, tiposArgs)) return f;
@@ -341,12 +359,12 @@ public class ValidadorTiposZ {
         if (candidatas.size() == 1) return candidatas.get(0);
         if (candidatas.size() > 1) {
             errores.add(new ErrorSemantico(linea, columna,
-                    "Llamada ambigua", "Más de una sobrecarga de '" + nombre + "' coincide con estos argumentos"));
+                    "Llamada ambigua", "Mas de una sobrecarga de '" + nombre + "' coincide con estos argumentos"));
             return null;
         }
 
         errores.add(new ErrorSemantico(linea, columna,
-                "Llamada inválida", "Ninguna sobrecarga de '" + nombre + "' coincide con estos argumentos"));
+                "Llamada invalida", "Ninguna sobrecarga de '" + nombre + "' coincide con estos argumentos"));
         return null;
     }
 

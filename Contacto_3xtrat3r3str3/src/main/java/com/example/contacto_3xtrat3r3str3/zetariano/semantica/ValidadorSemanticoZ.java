@@ -14,9 +14,9 @@ public class ValidadorSemanticoZ {
     private final ValidadorDeclaracionesZ declaraciones = new ValidadorDeclaracionesZ(tabla, errores);
     private final ValidadorAlcanceZ alcance = new ValidadorAlcanceZ(tabla, errores);
     private final ValidadorFlujoZ flujo = new ValidadorFlujoZ(errores);
-
     private final ValidadorTiposZ tipos = new ValidadorTiposZ(tabla, errores);
-    private NodoMetodo metodoActual;
+
+    private String tipoRetornoActual;
 
     public List<ErrorSemantico> analizar(NodoPrograma programa) {
         NodoClase clase = programa.clase();
@@ -26,15 +26,24 @@ public class ValidadorSemanticoZ {
         declaraciones.declararConstructores(clase);
         declaraciones.declararMetodos(clase);
 
+        for (NodoAtributo a : clase.atributos()) {
+            alcance.validarTipoDeclarado(a.tipo(), a.linea(), a.columna());
+        }
+
         for (NodoConstructor c : clase.constructores()) {
+            validarTiposDeParametros(c.parametros());
+            tipoRetornoActual = null;
             procesarCuerpoConParametros(c.parametros(), c.cuerpo());
         }
         for (NodoMetodo m : clase.metodos()) {
+            validarTiposDeParametros(m.parametros());
+            tipoRetornoActual = m.tipoRetorno();
             procesarCuerpoConParametros(m.parametros(), m.cuerpo());
         }
 
         return errores;
     }
+
 
     private void procesarCuerpoConParametros(List<NodoParametro> parametros, List<NodoSentencia> cuerpo) {
         tabla.entrarScope("miembro");
@@ -51,6 +60,7 @@ public class ValidadorSemanticoZ {
         switch (s.tipoNodo()) {
             case DECLARACION_VARIABLE -> {
                 NodoSentencia.DeclaracionVariable d = (NodoSentencia.DeclaracionVariable) s;
+                alcance.validarTipoDeclarado(d.tipo(), d.linea(), d.columna());
                 alcance.resolverExpresion(d.inicializacion());
                 tipos.validarInicializacion(d.tipo(), d.dimensiones(), d.inicializacion());
                 declaraciones.declararVariable(d);
@@ -61,8 +71,11 @@ public class ValidadorSemanticoZ {
                 alcance.resolverExpresion(a.valor());
                 tipos.validarAsignacion(a.destino(), a.valor());
             }
-            case EXPRESION_COMO_SENTENCIA ->
-                    alcance.resolverExpresion(((NodoSentencia.ExpresionComoSentencia) s).expresion());
+            case EXPRESION_COMO_SENTENCIA -> {
+                NodoExpr expr = ((NodoSentencia.ExpresionComoSentencia) s).expresion();
+                alcance.resolverExpresion(expr);
+                tipos.tipoDeExpresion(expr);
+            }
 
             case CONDICIONAL -> procesarCondicional((NodoSentencia.Condicional) s);
             case SWITCH -> procesarSwitch((NodoSentencia.Switch) s);
@@ -73,20 +86,24 @@ public class ValidadorSemanticoZ {
             case RETORNO -> {
                 NodoSentencia.Retorno r = (NodoSentencia.Retorno) s;
                 alcance.resolverExpresion(r.valor());
-                tipos.validarRetorno(r, metodoActual != null ? metodoActual.tipoRetorno() : null);
+                tipos.validarRetorno(r, tipoRetornoActual);
             }
-            case IMPRIMIR -> alcance.resolverExpresion(((NodoSentencia.Imprimir) s).expresion());
+            case IMPRIMIR -> {
+                NodoExpr expr = ((NodoSentencia.Imprimir) s).expresion();
+                alcance.resolverExpresion(expr);
+                tipos.tipoDeExpresion(expr);
+            }
             case LEER -> { }
             case ROMPER -> flujo.validarRomper((NodoSentencia.Romper) s);
             case CONTINUAR -> flujo.validarContinuar((NodoSentencia.Continuar) s);
 
-            //estos dos solo aparecen anidados dentro de Switch, nunca sueltos (ver nota de diseño previa)
             case CASO_SWITCH, CASO_DEFAULT -> { }
         }
     }
 
     private void procesarCondicional(NodoSentencia.Condicional c) {
         alcance.resolverExpresion(c.condicion());
+        tipos.validarCondicionBooleana(c.condicion());
         tabla.entrarScope("si");
         procesarBloque(c.cuerpoSi());
         tabla.salirScope();
@@ -100,6 +117,7 @@ public class ValidadorSemanticoZ {
 
     private void procesarSwitch(NodoSentencia.Switch sw) {
         alcance.resolverExpresion(sw.expresion());
+        tipos.tipoDeExpresion(sw.expresion());
         flujo.entrarSwitch();
 
         for (NodoSentencia.CasoSwitch caso : sw.casos()) {
@@ -120,6 +138,7 @@ public class ValidadorSemanticoZ {
         tabla.entrarScope("para");
         if (c.inicializacion() != null) procesarSentencia(c.inicializacion());
         alcance.resolverExpresion(c.condicion());
+        tipos.validarCondicionBooleana(c.condicion());
 
         flujo.entrarCiclo();
         procesarBloque(c.cuerpo());
@@ -131,6 +150,7 @@ public class ValidadorSemanticoZ {
 
     private void procesarCicloMientras(NodoSentencia.CicloMientras c) {
         alcance.resolverExpresion(c.condicion());
+        tipos.validarCondicionBooleana(c.condicion());
         tabla.entrarScope("mientras");
         flujo.entrarCiclo();
         procesarBloque(c.cuerpo());
@@ -145,9 +165,16 @@ public class ValidadorSemanticoZ {
         flujo.salirCiclo();
         tabla.salirScope();
         alcance.resolverExpresion(c.condicion());
+        tipos.validarCondicionBooleana(c.condicion());
     }
 
-    public List<ErrorSemantico> getErrores() {
+    private void validarTiposDeParametros(List<NodoParametro> parametros) {
+        for (NodoParametro p : parametros) {
+            alcance.validarTipoDeclarado(p.tipo(), p.linea(), p.columna());
+        }
+    }
+
+        public List<ErrorSemantico> getErrores() {
         return errores;
     }
 }

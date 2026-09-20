@@ -9,6 +9,7 @@ public class ValidadorAlcanceZ {
 
     private final TablaSimbolosZ tabla;
     private final List<ErrorSemantico> errores;
+    private static final java.util.Set<String> PRIMITIVOS = java.util.Set.of("int", "double", "char", "boolean", "String");
 
     public ValidadorAlcanceZ(TablaSimbolosZ tabla, List<ErrorSemantico> errores) {
         this.tabla = tabla;
@@ -94,5 +95,16 @@ public class ValidadorAlcanceZ {
             errores.add(new ErrorSemantico(linea, columna, "Identificador no declarado",
                     "'" + nombre + "' no existe en el ambito actual ni es un atributo de la clase"));
         }
+    }
+
+    //Valida que un tipo declarado (de variable, parametro o atributo) sea primitivo o la clase conocida.
+    public void validarTipoDeclarado(String tipo, int linea, int columna) {
+        if (tipo == null) return; //tipo void en un metodo, no aplica
+        if (PRIMITIVOS.contains(tipo)) return;
+        if (tipo.equals(tabla.getNombreClase())) return;
+
+        errores.add(new ErrorSemantico(linea, columna,
+                "Clase no declarada",
+                "'" + tipo + "' no corresponde a ningún tipo primitivo ni a la clase conocida"));
     }
 }
