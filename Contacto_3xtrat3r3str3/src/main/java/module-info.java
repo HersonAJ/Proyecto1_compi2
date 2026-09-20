@@ -17,4 +17,6 @@ module com.example.contacto_3xtrat3r3str3 {
     exports com.example.contacto_3xtrat3r3str3.y.ast;
     exports com.example.contacto_3xtrat3r3str3.y.semantica;
     exports com.example.contacto_3xtrat3r3str3.y.semantica.error;
+    exports com.example.contacto_3xtrat3r3str3.zetariano.nodo;
+    exports com.example.contacto_3xtrat3r3str3.zetariano.semantica;
 }

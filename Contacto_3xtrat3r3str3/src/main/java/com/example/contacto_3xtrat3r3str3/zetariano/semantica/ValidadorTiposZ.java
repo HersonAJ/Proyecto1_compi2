@@ -1,0 +1,373 @@
+package com.example.contacto_3xtrat3r3str3.zetariano.semantica;
+
+import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
+import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoExpr;
+import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoSentencia;
+
+import java.util.List;
+import java.util.Optional;
+
+public class ValidadorTiposZ {
+
+    public record TipoResuelto(String base, int dimensiones) {
+        public boolean esArreglo() { return dimensiones > 0; }
+    }
+
+    private static final String INT = "int";
+    private static final String DOUBLE = "double";
+    private static final String CHAR = "char";
+    private static final String BOOLEAN = "boolean";
+    private static final String STRING = "String";
+    private static final String NULO = "null";
+
+    private final TablaSimbolosZ tabla;
+    private final List<ErrorSemantico> errores;
+
+    public ValidadorTiposZ(TablaSimbolosZ tabla, List<ErrorSemantico> errores) {
+        this.tabla = tabla;
+        this.errores = errores;
+    }
+
+    private boolean esPrimitivo(String tipo) {
+        return INT.equals(tipo) || DOUBLE.equals(tipo) || CHAR.equals(tipo) || BOOLEAN.equals(tipo);
+    }
+
+    private boolean esNumerico(String tipo) {
+        return INT.equals(tipo) || DOUBLE.equals(tipo);
+    }
+
+    // CALCULO DE TIPO DE UNA EXPRESION
+    public TipoResuelto tipoDeExpresion(NodoExpr expr) {
+        if (expr == null) return null;
+
+        return switch (expr.tipoNodo()) {
+            case LITERAL_ENTERO -> new TipoResuelto(INT, 0);
+            case LITERAL_DECIMAL -> new TipoResuelto(DOUBLE, 0);
+            case LITERAL_CADENA -> new TipoResuelto(STRING, 0);
+            case LITERAL_CARACTER -> new TipoResuelto(CHAR, 0);
+            case LITERAL_BOOL -> new TipoResuelto(BOOLEAN, 0);
+            case LITERAL_NULO -> new TipoResuelto(NULO, 0);
+
+            //el tipo real de una lista literal depende del contexto (ver validarInicializacion);
+            //aqui no hay suficiente informacion para resolverlo de forma aislada
+            case LISTA_LITERAL -> null;
+
+            case IDENTIFICADOR -> {
+                NodoExpr.Identificador id = (NodoExpr.Identificador) expr;
+                Optional<TablaSimbolosZ.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
+                yield simbolo.map(s -> new TipoResuelto(s.tipo(), s.dimensiones())).orElse(null);
+            }
+
+            case ACCESO_ARRAY -> {
+                NodoExpr.AccesoArray acceso = (NodoExpr.AccesoArray) expr;
+                TipoResuelto tipoIndice = tipoDeExpresion(acceso.indice());
+                if (tipoIndice != null && !INT.equals(tipoIndice.base())) {
+                    errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
+                            "Tipo incompatible",
+                            "El índice de un arreglo debe ser 'int', se encontró '" + tipoIndice.base() + "'"));
+                }
+                TipoResuelto tipoArreglo = tipoDeExpresion(acceso.arreglo());
+                if (tipoArreglo == null) yield null;
+                if (tipoArreglo.dimensiones() == 0) {
+                    errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
+                            "Tipo incompatible", "No se puede indexar un valor que no es arreglo"));
+                    yield null;
+                }
+                yield new TipoResuelto(tipoArreglo.base(), tipoArreglo.dimensiones() - 1);
+            }
+
+            case ACCESO_ATRIBUTO -> {
+                NodoExpr.AccesoAtributo acceso = (NodoExpr.AccesoAtributo) expr;
+                TipoResuelto tipoObjeto = tipoDeExpresion(acceso.objeto());
+                if (tipoObjeto == null || !tipoObjeto.base().equals(tabla.getNombreClase())) yield null;
+
+                Optional<TablaSimbolosZ.SimboloAtributo> atributo = tabla.buscarAtributo(acceso.atributo());
+                if (atributo.isEmpty()) {
+                    errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
+                            "Atributo no declarado",
+                            "'" + acceso.atributo() + "' no existe en la clase '" + tipoObjeto.base() + "'"));
+                    yield null;
+                }
+                yield new TipoResuelto(atributo.get().tipo(), atributo.get().dimensiones());
+            }
+
+            case BINARIA -> {
+                NodoExpr.Binaria bin = (NodoExpr.Binaria) expr;
+                TipoResuelto izq = tipoDeExpresion(bin.izquierda());
+                TipoResuelto der = tipoDeExpresion(bin.derecha());
+                yield tipoResultanteBinaria(bin.operador(), izq, der, bin.linea(), bin.columna());
+            }
+
+            case UNARIA -> {
+                NodoExpr.Unaria un = (NodoExpr.Unaria) expr;
+                TipoResuelto operando = tipoDeExpresion(un.operando());
+                if (operando == null) yield null;
+
+                if ("!".equals(un.operador())) {
+                    if (!BOOLEAN.equals(operando.base())) {
+                        errores.add(new ErrorSemantico(un.linea(), un.columna(),
+                                "Tipo incompatible", "'!' requiere 'boolean', se encontró '" + operando.base() + "'"));
+                        yield null;
+                    }
+                    yield operando;
+                } else { // "-"
+                    if (!esNumerico(operando.base())) {
+                        errores.add(new ErrorSemantico(un.linea(), un.columna(),
+                                "Tipo incompatible", "'-' unario requiere tipo numérico, se encontró '" + operando.base() + "'"));
+                        yield null;
+                    }
+                    yield operando;
+                }
+            }
+
+            case INCREMENTO_DECREMENTO -> {
+                NodoExpr.IncrementoDecremento inc = (NodoExpr.IncrementoDecremento) expr;
+                TipoResuelto operando = tipoDeExpresion(inc.operando());
+                if (operando != null && !esNumerico(operando.base())) {
+                    errores.add(new ErrorSemantico(inc.linea(), inc.columna(),
+                            "Tipo incompatible", "'" + inc.operador() + "' requiere tipo numérico"));
+                    yield null;
+                }
+                yield operando;
+            }
+
+            case TERNARIA -> {
+                NodoExpr.Ternaria t = (NodoExpr.Ternaria) expr;
+                TipoResuelto cond = tipoDeExpresion(t.condicion());
+                if (cond != null && !BOOLEAN.equals(cond.base())) {
+                    errores.add(new ErrorSemantico(t.linea(), t.columna(),
+                            "Tipo incompatible", "La condición del ternario debe ser 'boolean'"));
+                }
+                TipoResuelto siVerdadero = tipoDeExpresion(t.siVerdadero());
+                TipoResuelto siFalso = tipoDeExpresion(t.siFalso());
+                if (siVerdadero == null || siFalso == null) yield null;
+
+                if (esAsignable(siVerdadero, siFalso)) yield siVerdadero;
+                if (esAsignable(siFalso, siVerdadero)) yield siFalso;
+                errores.add(new ErrorSemantico(t.linea(), t.columna(),
+                        "Tipo incompatible",
+                        "Las dos ramas del ternario tienen tipos incompatibles: '"
+                                + siVerdadero.base() + "' y '" + siFalso.base() + "'"));
+                yield null;
+            }
+
+            case LLAMADA_FUNCION -> {
+                NodoExpr.LlamadaFuncion llamada = (NodoExpr.LlamadaFuncion) expr;
+                List<TipoResuelto> tiposArgs = llamada.argumentos().stream().map(this::tipoDeExpresion).toList();
+                TablaSimbolosZ.Firma firma = resolverSobrecarga(tabla.getMetodos(llamada.nombre()), tiposArgs,
+                        llamada.linea(), llamada.columna(), llamada.nombre());
+                yield firma == null || firma.tipoRetorno() == null ? null : new TipoResuelto(firma.tipoRetorno(), 0);
+            }
+
+            case LLAMADA_METODO -> {
+                NodoExpr.LlamadaMetodo llamada = (NodoExpr.LlamadaMetodo) expr;
+                TipoResuelto tipoObjeto = tipoDeExpresion(llamada.objeto());
+                List<TipoResuelto> tiposArgs = llamada.argumentos().stream().map(this::tipoDeExpresion).toList();
+                if (tipoObjeto == null || !tipoObjeto.base().equals(tabla.getNombreClase())) yield null;
+
+                TablaSimbolosZ.Firma firma = resolverSobrecarga(tabla.getMetodos(llamada.nombre()), tiposArgs,
+                        llamada.linea(), llamada.columna(), llamada.nombre());
+                yield firma == null || firma.tipoRetorno() == null ? null : new TipoResuelto(firma.tipoRetorno(), 0);
+            }
+
+            case INSTANCIA_OBJETO -> {
+                NodoExpr.InstanciaObjeto instancia = (NodoExpr.InstanciaObjeto) expr;
+                if (!instancia.tipoClase().equals(tabla.getNombreClase())) yield null; //ya reportado en ValidadorAlcanceZ
+
+                List<TipoResuelto> tiposArgs = instancia.argumentos().stream().map(this::tipoDeExpresion).toList();
+                resolverSobrecarga(tabla.getConstructores(instancia.tipoClase()), tiposArgs,
+                        instancia.linea(), instancia.columna(), instancia.tipoClase());
+                yield new TipoResuelto(instancia.tipoClase(), 0);
+            }
+
+            case ARREGLO_NUEVO -> {
+                NodoExpr.ArregloNuevo arreglo = (NodoExpr.ArregloNuevo) expr;
+                for (NodoExpr dim : arreglo.dimensiones()) {
+                    if (dim == null) continue;
+                    TipoResuelto tipoDim = tipoDeExpresion(dim);
+                    if (tipoDim != null && !INT.equals(tipoDim.base())) {
+                        errores.add(new ErrorSemantico(arreglo.linea(), arreglo.columna(),
+                                "Tipo incompatible", "El tamaño de un arreglo debe ser 'int'"));
+                    }
+                }
+                yield new TipoResuelto(arreglo.tipoBase(), arreglo.dimensiones().size());
+            }
+        };
+    }
+
+    private TipoResuelto tipoResultanteBinaria(String operador, TipoResuelto izq, TipoResuelto der, int linea, int columna) {
+        if (izq == null || der == null) return null;
+
+        return switch (operador) {
+            case "+" -> {
+                if (STRING.equals(izq.base()) || STRING.equals(der.base())) yield new TipoResuelto(STRING, 0);
+                if (esNumerico(izq.base()) && esNumerico(der.base())) yield promocionNumerica(izq, der);
+                reportarIncompatible(operador, izq, der, linea, columna);
+                yield null;
+            }
+            case "-", "*", "/", "%" -> {
+                if (esNumerico(izq.base()) && esNumerico(der.base())) yield promocionNumerica(izq, der);
+                reportarIncompatible(operador, izq, der, linea, columna);
+                yield null;
+            }
+            case "<", ">", "<=", ">=" -> {
+                if (esNumerico(izq.base()) && esNumerico(der.base())) yield new TipoResuelto(BOOLEAN, 0);
+                reportarIncompatible(operador, izq, der, linea, columna);
+                yield null;
+            }
+            case "==", "!=" -> {
+                boolean compatibles = izq.base().equals(der.base())
+                        || (esNumerico(izq.base()) && esNumerico(der.base()))
+                        || NULO.equals(izq.base()) || NULO.equals(der.base());
+                if (compatibles) yield new TipoResuelto(BOOLEAN, 0);
+                reportarIncompatible(operador, izq, der, linea, columna);
+                yield null;
+            }
+            case "&&", "||" -> {
+                if (BOOLEAN.equals(izq.base()) && BOOLEAN.equals(der.base())) yield new TipoResuelto(BOOLEAN, 0);
+                reportarIncompatible(operador, izq, der, linea, columna);
+                yield null;
+            }
+            default -> null;
+        };
+    }
+
+    private TipoResuelto promocionNumerica(TipoResuelto izq, TipoResuelto der) {
+        return (DOUBLE.equals(izq.base()) || DOUBLE.equals(der.base()))
+                ? new TipoResuelto(DOUBLE, 0) : new TipoResuelto(INT, 0);
+    }
+
+    private void reportarIncompatible(String operador, TipoResuelto izq, TipoResuelto der, int linea, int columna) {
+        errores.add(new ErrorSemantico(linea, columna,
+                "Tipo incompatible",
+                "El operador '" + operador + "' no admite '" + izq.base() + "' y '" + der.base() + "'"));
+    }
+
+
+    // COMPATIBILIDAD Y ASIGNACION
+    private boolean esAsignable(TipoResuelto destino, TipoResuelto origen) {
+        if (NULO.equals(origen.base())) {
+            return !esPrimitivo(destino.base());
+        }
+        if (destino.dimensiones() != origen.dimensiones()) return false;
+        if (destino.dimensiones() > 0) {
+            return destino.base().equals(origen.base());
+        }
+        if (destino.base().equals(origen.base())) return true;
+        return DOUBLE.equals(destino.base()) && INT.equals(origen.base());
+    }
+
+    public void validarInicializacion(String tipoDeclarado, int dimensionesDeclaradas, NodoExpr inicializacion) {
+        if (inicializacion == null) return;
+
+        if (inicializacion.tipoNodo() == com.example.contacto_3xtrat3r3str3.zetariano.nodo.TipoNodoExpr.LISTA_LITERAL) {
+            NodoExpr.ListaLiteral lista = (NodoExpr.ListaLiteral) inicializacion;
+            TipoResuelto tipoElemento = new TipoResuelto(tipoDeclarado, Math.max(0, dimensionesDeclaradas - 1));
+            for (NodoExpr elem : lista.elementos()) {
+                TipoResuelto tipoValor = tipoDeExpresion(elem);
+                if (tipoValor != null && !esAsignable(tipoElemento, tipoValor)) {
+                    errores.add(new ErrorSemantico(elem.linea(), elem.columna(),
+                            "Tipo incompatible",
+                            "No se puede colocar un valor '" + tipoValor.base() + "' en un arreglo de '" + tipoDeclarado + "'"));
+                }
+            }
+            return;
+        }
+
+        TipoResuelto tipoValor = tipoDeExpresion(inicializacion);
+        if (tipoValor == null) return;
+        TipoResuelto tipoDestino = new TipoResuelto(tipoDeclarado, dimensionesDeclaradas);
+        if (!esAsignable(tipoDestino, tipoValor)) {
+            errores.add(new ErrorSemantico(inicializacion.linea(), inicializacion.columna(),
+                    "Tipo incompatible",
+                    "No se puede asignar '" + tipoValor.base() + "' a una variable de tipo '" + tipoDeclarado + "'"));
+        }
+    }
+
+    public void validarAsignacion(NodoExpr destino, NodoExpr valor) {
+        TipoResuelto tipoDestino = tipoDeExpresion(destino);
+        TipoResuelto tipoValor = tipoDeExpresion(valor);
+        if (tipoDestino == null || tipoValor == null) return;
+
+        if (!esAsignable(tipoDestino, tipoValor)) {
+            errores.add(new ErrorSemantico(valor.linea(), valor.columna(),
+                    "Tipo incompatible",
+                    "No se puede asignar '" + tipoValor.base() + "' a algo de tipo '" + tipoDestino.base() + "'"));
+        }
+    }
+
+    public void validarCondicionBooleana(NodoExpr condicion) {
+        TipoResuelto tipo = tipoDeExpresion(condicion);
+        if (tipo != null && !BOOLEAN.equals(tipo.base())) {
+            errores.add(new ErrorSemantico(condicion.linea(), condicion.columna(),
+                    "Flujo inválido",
+                    "La condición debe ser 'boolean', se encontró '" + tipo.base() + "'"));
+        }
+    }
+
+    public void validarRetorno(NodoSentencia.Retorno retorno, String tipoRetornoEsperado) {
+        if (tipoRetornoEsperado == null) {
+            if (retorno.valor() != null) {
+                errores.add(new ErrorSemantico(retorno.linea(), retorno.columna(),
+                        "Tipo incompatible", "El método es 'void', no debe retornar un valor"));
+            }
+            return;
+        }
+        if (retorno.valor() == null) {
+            errores.add(new ErrorSemantico(retorno.linea(), retorno.columna(),
+                    "Tipo incompatible", "Se esperaba retornar un valor de tipo '" + tipoRetornoEsperado + "'"));
+            return;
+        }
+        TipoResuelto tipoValor = tipoDeExpresion(retorno.valor());
+        TipoResuelto tipoEsperado = new TipoResuelto(tipoRetornoEsperado, 0);
+        if (tipoValor != null && !esAsignable(tipoEsperado, tipoValor)) {
+            errores.add(new ErrorSemantico(retorno.linea(), retorno.columna(),
+                    "Tipo incompatible",
+                    "Se esperaba retornar '" + tipoRetornoEsperado + "', se encontró '" + tipoValor.base() + "'"));
+        }
+    }
+
+    // RESOLUCION DE SOBRECARGA
+    private TablaSimbolosZ.Firma resolverSobrecarga(List<TablaSimbolosZ.Firma> firmas, List<TipoResuelto> tiposArgs,
+                                                    int linea, int columna, String nombre) {
+        if (firmas.isEmpty()) return null;
+        if (tiposArgs.stream().anyMatch(java.util.Objects::isNull)) return null;
+        //1. intento de coincidencia exacta
+        for (TablaSimbolosZ.Firma f : firmas) {
+            if (coincideExacto(f, tiposArgs)) return f;
+        }
+        //2. intento permitiendo la promocion int -> double
+        List<TablaSimbolosZ.Firma> candidatas = firmas.stream().filter(f -> coincideConPromocion(f, tiposArgs)).toList();
+        if (candidatas.size() == 1) return candidatas.get(0);
+        if (candidatas.size() > 1) {
+            errores.add(new ErrorSemantico(linea, columna,
+                    "Llamada ambigua", "Más de una sobrecarga de '" + nombre + "' coincide con estos argumentos"));
+            return null;
+        }
+
+        errores.add(new ErrorSemantico(linea, columna,
+                "Llamada inválida", "Ninguna sobrecarga de '" + nombre + "' coincide con estos argumentos"));
+        return null;
+    }
+
+    private boolean coincideExacto(TablaSimbolosZ.Firma f, List<TipoResuelto> tiposArgs) {
+        if (f.parametros().size() != tiposArgs.size()) return false;
+        for (int i = 0; i < tiposArgs.size(); i++) {
+            TablaSimbolosZ.Parametro p = f.parametros().get(i);
+            if (!p.tipo().equals(tiposArgs.get(i).base()) || p.dimensiones() != tiposArgs.get(i).dimensiones()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean coincideConPromocion(TablaSimbolosZ.Firma f, List<TipoResuelto> tiposArgs) {
+        if (f.parametros().size() != tiposArgs.size()) return false;
+        for (int i = 0; i < tiposArgs.size(); i++) {
+            TablaSimbolosZ.Parametro p = f.parametros().get(i);
+            TipoResuelto destino = new TipoResuelto(p.tipo(), p.dimensiones());
+            if (!esAsignable(destino, tiposArgs.get(i))) return false;
+        }
+        return true;
+    }
+}
