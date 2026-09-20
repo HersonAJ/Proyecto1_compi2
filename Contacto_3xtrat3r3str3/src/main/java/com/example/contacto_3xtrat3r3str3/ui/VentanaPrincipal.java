@@ -5,6 +5,8 @@ import com.example.contacto_3xtrat3r3str3.y.errores.ErrorPosicional;
 import com.example.contacto_3xtrat3r3str3.y.errores.ResultadoCompilacionY;
 import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import com.example.contacto_3xtrat3r3str3.y.service.ServicioCompilacionY;
+import com.example.contacto_3xtrat3r3str3.zetariano.service.ResultadoCompilacionZ;
+import com.example.contacto_3xtrat3r3str3.zetariano.service.ServicioCompilacionZ;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
@@ -27,6 +29,7 @@ public class VentanaPrincipal {
     private final MenuPrincipal menu;
     private final PanelSalida panelSalida;
     private final ServicioCompilacionY servicioY = new ServicioCompilacionY();
+    private final ServicioCompilacionZ servicioZ = new ServicioCompilacionZ();
 
     public VentanaPrincipal(Stage stage) {
         this.stage = stage;
@@ -260,6 +263,8 @@ public class VentanaPrincipal {
 
         if (lenguaje == Lenguaje.Y) {
             compilarY(editor);
+        } else if (lenguaje == Lenguaje.ZETARIANO) {
+            compilarZ(editor);
         } else {
             panelSalida.agregarError("UI", -1, -1,"Aún no hay compilador para " + lenguaje.getNombreVisible() + ".");
             panelSalida.enfocarErrores();
@@ -270,6 +275,33 @@ public class VentanaPrincipal {
         panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como Y?");
 
         ResultadoCompilacionY resultado = servicioY.analizar(editor.getTexto());
+
+        for (ErrorPosicional e : resultado.getErroresLexicos()) {
+            panelSalida.agregarError("Léxico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorPosicional e : resultado.getErroresSintacticos()) {
+            panelSalida.agregarError("Sintáctico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorSemantico e : resultado.getErroresSemanticos()) {
+            panelSalida.agregarError(e.categoria(), e.linea(), e.columna(), e.mensaje());
+        }
+        for (String e : resultado.getMensajesInternos()) {
+            panelSalida.agregarError("Interno", -1, -1, e);
+        }
+
+        if (resultado.isExitoso()) {
+            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+        } else {
+            panelSalida.imprimirConsola(
+                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.enfocarErrores();
+        }
+    }
+
+    private void compilarZ(EditorCodigo editor) {
+        panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como .z");
+
+        ResultadoCompilacionZ resultado = servicioZ.analizar(editor.getTexto());
 
         for (ErrorPosicional e : resultado.getErroresLexicos()) {
             panelSalida.agregarError("Léxico", e.getLinea(), e.getColumna(), e.getMensaje());

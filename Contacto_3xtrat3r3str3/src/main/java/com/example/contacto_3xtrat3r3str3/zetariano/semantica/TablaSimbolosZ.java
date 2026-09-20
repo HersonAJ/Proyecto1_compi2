@@ -10,7 +10,7 @@ public class TablaSimbolosZ {
     public record Parametro(String nombre, String tipo, int dimensiones) {}
 
     /** Una variable declarada en un scope (local o parametro ya registrado como variable). */
-    public record SimboloVariable(String nombre, String tipo, int dimensiones) {}
+    public record SimboloVariable(String nombre, String tipo, int dimensiones, Integer tamanoConocido) {}
 
     /** Un atributo publico de la clase: 'String nombre;'. */
     public record SimboloAtributo(String nombre, String tipo, int dimensiones) {}
@@ -27,6 +27,8 @@ public class TablaSimbolosZ {
 
     public record EntradaSimbolo(int id, String nombre, Categoria categoria, String tipo,
                                  int numParametros, String ambito, int alcance) {}
+
+
 
     //scope interno (variables locales dentro de un bloque/metodo)
     private static class Scope {
@@ -108,11 +110,15 @@ public class TablaSimbolosZ {
     }
 
     public boolean declararVariable(String nombre, String tipo, int dimensiones) {
+        return declararVariable(nombre, tipo, dimensiones, null);
+    }
+
+    public boolean declararVariable(String nombre, String tipo, int dimensiones, Integer tamanoConocido) {
         Scope actual = pila.peek();
         if (actual.variables.containsKey(nombre)) {
-            return false; //duplicada en el mismo scope
+            return false;
         }
-        actual.variables.put(nombre, new SimboloVariable(nombre, tipo, dimensiones));
+        actual.variables.put(nombre, new SimboloVariable(nombre, tipo, dimensiones, tamanoConocido));
         registro.add(new EntradaSimbolo(siguienteId++, nombre, Categoria.VARIABLE, tipo, 0,
                 ambitoActual(), alcanceActual()));
         return true;
@@ -128,7 +134,7 @@ public class TablaSimbolosZ {
             if (v != null) return Optional.of(v);
         }
         return buscarAtributo(nombre)
-                .map(a -> new SimboloVariable(a.nombre(), a.tipo(), a.dimensiones()));
+                .map(a -> new SimboloVariable(a.nombre(), a.tipo(), a.dimensiones(), null));
     }
 
     // CONSTRUCTORES (con sobrecarga)

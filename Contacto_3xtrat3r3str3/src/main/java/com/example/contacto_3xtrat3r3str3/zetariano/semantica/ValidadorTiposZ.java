@@ -65,6 +65,7 @@ public class ValidadorTiposZ {
                             "Tipo incompatible",
                             "El índice de un arreglo debe ser 'int', se encontró '" + tipoIndice.base() + "'"));
                 }
+
                 TipoResuelto tipoArreglo = tipoDeExpresion(acceso.arreglo());
                 if (tipoArreglo == null) yield null;
                 if (tipoArreglo.dimensiones() == 0) {
@@ -72,6 +73,22 @@ public class ValidadorTiposZ {
                             "Tipo incompatible", "No se puede indexar un valor que no es arreglo"));
                     yield null;
                 }
+
+                //A8: solo se valida cuando el arreglo es una variable directa con tamano conocido
+                //y el indice es un literal -- fuera de eso, no hay forma de saberlo sin ejecutar el programa
+                if (acceso.arreglo() instanceof NodoExpr.Identificador id && acceso.indice() instanceof NodoExpr.LiteralEntero indiceLit) {
+                    Optional<TablaSimbolosZ.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
+                    if (simbolo.isPresent() && simbolo.get().tamanoConocido() != null) {
+                        int tamano = simbolo.get().tamanoConocido();
+                        int indice = indiceLit.valor();
+                        if (indice < 0 || indice >= tamano) {
+                            errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
+                                    "Indice fuera de rango",
+                                    "El índice " + indice + " está fuera del rango válido [0, " + (tamano - 1) + "] para '" + id.nombre() + "'"));
+                        }
+                    }
+                }
+
                 yield new TipoResuelto(tipoArreglo.base(), tipoArreglo.dimensiones() - 1);
             }
 

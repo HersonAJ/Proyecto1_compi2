@@ -50,7 +50,7 @@ public class ValidadorDeclaracionesZ {
         for (NodoMetodo m : clase.metodos()) {
             List<TablaSimbolosZ.Parametro> parametros = construirParametros(m.parametros(), m.nombre());
             if (!tabla.declararMetodo(m.nombre(), parametros, m.tipoRetorno())) {
-                errores.add(new ErrorSemantico(m.linea(), m.columna(), "Declaracion ducplicada",
+                errores.add(new ErrorSemantico(m.linea(), m.columna(), "Declaracion duplicada",
                         "Ya existe un metodo '" +  m.nombre() + "' con esa misma firma"));
             }
 
@@ -79,9 +79,25 @@ public class ValidadorDeclaracionesZ {
     }
 
     public void declararVariable(NodoSentencia.DeclaracionVariable d) {
-        if (!tabla.declararVariable(d.nombre(), d.tipo(), d.dimensiones())) {
+        Integer tamanoConocido = calcularTamanoConocido(d.inicializacion());
+        if (!tabla.declararVariable(d.nombre(), d.tipo(), d.dimensiones(), tamanoConocido)) {
             errores.add(new ErrorSemantico(d.linea(), d.columna(), "Declaracion duplicada",
                     "'" + d.nombre() + "' ya fue declarado en este ambito"));
         }
+    }
+
+    private Integer calcularTamanoConocido(NodoExpr inicializacion) {
+        if (inicializacion == null) return null;
+
+        if (inicializacion instanceof NodoExpr.ListaLiteral lista) {
+            return lista.elementos().size(); // '{10, 20, 30}' -> tamaño 3
+        }
+        if (inicializacion instanceof NodoExpr.ArregloNuevo arreglo && !arreglo.dimensiones().isEmpty()) {
+            NodoExpr primeraDimension = arreglo.dimensiones().get(0);
+            if (primeraDimension instanceof NodoExpr.LiteralEntero lit) {
+                return lit.valor(); // 'new int[5]' -> tamaño 5
+            }
+        }
+        return null;
     }
 }

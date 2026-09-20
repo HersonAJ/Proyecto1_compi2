@@ -74,7 +74,7 @@ import java.util.List;
 public class ResultadoCompilacionY {
 
     private final boolean exitoso;
-    private final NodoPrograma.Programa programa;   // ← tipo concreto
+    private final NodoPrograma.Programa programa;
     private final String codigoPreprocesado;
     private final TablaSimbolos tablaSimbolos;
     private final List<ErrorPosicional> erroresLexicos;
