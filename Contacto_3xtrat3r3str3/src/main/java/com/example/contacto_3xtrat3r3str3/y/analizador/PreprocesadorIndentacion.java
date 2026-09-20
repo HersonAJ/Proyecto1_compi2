@@ -9,60 +9,65 @@ public class PreprocesadorIndentacion {
 
     public String preprocesar(String codigoFuente) {
         pilaIndentacion.clear();
-        pilaIndentacion.add(0); //nivel base
+        pilaIndentacion.add(0);
 
         StringBuilder salida = new StringBuilder();
 
-        //separar por saltos de linea
+        // separar por saltos de linea
         String[] lineas = codigoFuente.split("\\r?\\n", -1);
 
         for (int i = 0; i < lineas.length; i++) {
             String linea = lineas[i];
 
-            //lineas vacias: emitir solo el salto real para conservar el conteo de lineas
+            // lineas vacias: emitir solo el salto real para conservar el conteo de lineas
             if (linea.trim().isEmpty()) {
                 salida.append("\n");
                 continue;
             }
 
-            //lineas que solo son comentarios: emitir solo el salto real
+            // lineas que solo son comentarios: emitir solo el salto real
             if (esSoloComentario(linea)) {
                 salida.append("\n");
                 continue;
             }
 
-            //calcular el nivel de indentacion, contar los tabs
+            // calcular el nivel de indentacion (conteo de tabs)
             int nivelActual = contarTabsIniciales(linea);
 
-            //validar que no haya espacios al inicio solo tabs
+            // validar que no haya espacios al inicio solo tabs
             validarSinEspaciosIniciales(linea);
 
-            //comparar con el nivel anterior de la pila
-            int nivelAnterior = pilaIndentacion.get(pilaIndentacion.size() - 1);
+            // comparar con el tope de la pila
+            int nivelTope = pilaIndentacion.get(pilaIndentacion.size() - 1);
 
-            if (nivelActual > nivelAnterior) {
-                //aumento la indentacion : un INDENT por cada nivel extra
-                for (int n = nivelAnterior; n < nivelActual; n++) {
-                    salida.append("<INDENT>");
-                    pilaIndentacion.add(nivelAnterior + 1);
-                }
-            } else if (nivelActual < nivelAnterior) {
-                //disminuyo: un DEDENT por cada nivel que se baja
+            if (nivelActual > nivelTope) {
+                // Aumento de indentacion: UN SOLO INDENT, guardamos el nuevo nivel.
+                salida.append("<INDENT>");
+                pilaIndentacion.add(nivelActual);
+            } else if (nivelActual < nivelTope) {
+                // Disminucion: un DEDENT por cada nivel que se cierra.
                 while (pilaIndentacion.get(pilaIndentacion.size() - 1) > nivelActual) {
                     salida.append("<DEDENT>");
                     pilaIndentacion.remove(pilaIndentacion.size() - 1);
                 }
+                // Si el nivel actual no coincide con ningun nivel abierto,
+                // es un error de indentacion (nivel no alineado).
+                if (pilaIndentacion.get(pilaIndentacion.size() - 1) != nivelActual) {
+                    throw new RuntimeException(
+                            "Indentacion invalida: el nivel " + nivelActual
+                                    + " no coincide con ningun nivel abierto");
+                }
             }
 
-            //quitar la indentacion inicial y agregar el contenido
+            // quitar la indentacion inicial y agregar el contenido
             String contenido = linea.substring(nivelActual).stripTrailing();
             salida.append(contenido).append("<NEWLINE>");
 
-            //salto real para conservar el conteo de lineas de ANTLR
+            // salto real para conservar el conteo de lineas de ANTLR
             salida.append("\n");
         }
 
-        //al final del archivo, cerrar todos los niveles abiertos
+        // al final del archivo, cerrar todos los niveles abiertos
         while (pilaIndentacion.size() > 1) {
             salida.append("<DEDENT>");
             pilaIndentacion.remove(pilaIndentacion.size() - 1);
