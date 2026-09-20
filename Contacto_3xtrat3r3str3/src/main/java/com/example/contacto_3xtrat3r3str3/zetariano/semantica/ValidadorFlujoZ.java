@@ -44,12 +44,14 @@ public class ValidadorFlujoZ {
         for (NodoSentencia s : bloque) {
             if (!alcanzable) {
                 errores.add(new ErrorSemantico(s.linea(), s.columna(), "Código inalcanzable",
-                        "Esta instrucción nunca se ejecutará porque está después de 'break' o 'continue'"));
+                        "Esta instrucción nunca se ejecutará porque está después de 'return', 'break' o 'continue'"));
                 break;
             }
 
-            // Solo un break/continue
-            if (s instanceof NodoSentencia.Romper && (nivelCiclo > 0 || nivelSwitch > 0)) {
+            // Un return, break o continue válido corta el flujo.
+            if (s instanceof NodoSentencia.Retorno) {
+                alcanzable = false;
+            } else if (s instanceof NodoSentencia.Romper && (nivelCiclo > 0 || nivelSwitch > 0)) {
                 alcanzable = false;
             } else if (s instanceof NodoSentencia.Continuar && nivelCiclo > 0) {
                 alcanzable = false;

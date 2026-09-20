@@ -74,8 +74,6 @@ public class ValidadorTiposZ {
                     yield null;
                 }
 
-                //A8: solo se valida cuando el arreglo es una variable directa con tamano conocido
-                //y el indice es un literal -- fuera de eso, no hay forma de saberlo sin ejecutar el programa
                 if (acceso.arreglo() instanceof NodoExpr.Identificador id && acceso.indice() instanceof NodoExpr.LiteralEntero indiceLit) {
                     Optional<TablaSimbolosZ.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
                     if (simbolo.isPresent() && simbolo.get().tamanoConocido() != null) {
@@ -118,7 +116,7 @@ public class ValidadorTiposZ {
                 NodoExpr.Binaria bin = (NodoExpr.Binaria) expr;
                 TipoResuelto izq = tipoDeExpresion(bin.izquierda());
                 TipoResuelto der = tipoDeExpresion(bin.derecha());
-                yield tipoResultanteBinaria(bin.operador(), izq, der, bin.linea(), bin.columna());
+                yield tipoResultanteBinaria(bin.operador(), izq, der, bin.izquierda(), bin.derecha(), bin.linea(), bin.columna());
             }
 
             case UNARIA -> {
@@ -235,7 +233,9 @@ public class ValidadorTiposZ {
         };
     }
 
-    private TipoResuelto tipoResultanteBinaria(String operador, TipoResuelto izq, TipoResuelto der, int linea, int columna) {
+    private TipoResuelto tipoResultanteBinaria(String operador, TipoResuelto izq, TipoResuelto der,
+                                               NodoExpr izqExpr, NodoExpr derExpr,
+                                               int linea, int columna) {
         if (izq == null || der == null) return null;
 
         return switch (operador) {
@@ -246,7 +246,16 @@ public class ValidadorTiposZ {
                 yield null;
             }
             case "-", "*", "/", "%" -> {
-                if (esNumerico(izq.base()) && esNumerico(der.base())) yield promocionNumerica(izq, der);
+                if (esNumerico(izq.base()) && esNumerico(der.base())) {
+                    // Validar división/módulo entre cero literal.
+                    if (("/".equals(operador) || "%".equals(operador)) && esCeroLiteral(derExpr)) {
+                        errores.add(new ErrorSemantico(linea, columna,
+                                "División entre cero",
+                                "No se puede dividir ni calcular módulo por cero"));
+                        yield null;
+                    }
+                    yield promocionNumerica(izq, der);
+                }
                 reportarIncompatible(operador, izq, der, linea, columna);
                 yield null;
             }
@@ -324,12 +333,16 @@ public class ValidadorTiposZ {
         }
     }
 
-    /**
-     * Valida una asignación. Maneja tanto '=' como '+=' '-=' '*='.
-     * Para '+=' '-=' '*=', primero valida que la operación sea posible y
-     * luego que el resultado sea asignable al destino.
-     */
+    //Valida una asignación. Maneja tanto '=' como '+=' '-=' '*='.
     public void validarAsignacion(String operador, NodoExpr destino, NodoExpr valor) {
+
+        if (!esLValue(destino)) {
+            errores.add(new ErrorSemantico(destino.linea(), destino.columna(), "Destino inválido",
+                    "El lado izquierdo de una asignación debe ser una variable, "
+                            + "un elemento de arreglo o un atributo"));
+            return;
+        }
+
         TipoResuelto tipoDestino = tipoDeExpresion(destino);
         TipoResuelto tipoValor = tipoDeExpresion(valor);
         if (tipoDestino == null || tipoValor == null) return;
@@ -358,7 +371,7 @@ public class ValidadorTiposZ {
 
         // Calcular el tipo resultante de la operación simulada.
         TipoResuelto tipoResultado = tipoResultanteBinaria(
-                operadorBinario, tipoDestino, tipoValor, destino.linea(), destino.columna());
+                operadorBinario, tipoDestino, tipoValor, destino, valor, destino.linea(), destino.columna());
 
         if (tipoResultado == null) return;
 
@@ -451,10 +464,8 @@ public class ValidadorTiposZ {
         return true;
     }
 
-    /**
-     * Determina si una expresión puede ser destino de ++/-- o de una asignación.
-     * Solo los identificadores, accesos a arreglo y accesos a atributo son válidos.
-     */
+    //Determina si una expresión puede ser destino de ++/-- o de una asignación.
+    //Solo los identificadores, accesos a arreglo y accesos a atributo son válidos.
     private boolean esLValue(NodoExpr expr) {
         if (expr == null) return false;
         return switch (expr.tipoNodo()) {
@@ -463,10 +474,7 @@ public class ValidadorTiposZ {
         };
     }
 
-    /**
-     * Valida que la expresión de un switch sea de un tipo permitido:
-     * int, char, String o boolean.
-     */
+    //Valida que la expresión de un switch sea de un tipo permitido: int, char, String o boolean.
     public void validarTipoSwitch(NodoExpr expresion) {
         TipoResuelto tipo = tipoDeExpresion(expresion);
         if (tipo == null) return; // error previo
@@ -483,5 +491,10 @@ public class ValidadorTiposZ {
                     "La expresión del switch debe ser 'int', 'char', 'String' o 'boolean', se encontró '"
                             + base + "'"));
         }
+    }
+
+    //Determina si una expresión es el literal entero 0.
+    private boolean esCeroLiteral(NodoExpr expr) {
+        return expr instanceof NodoExpr.LiteralEntero lit && lit.valor() == 0;
     }
 }
