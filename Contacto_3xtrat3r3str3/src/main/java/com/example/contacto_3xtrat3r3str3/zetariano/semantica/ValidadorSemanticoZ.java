@@ -127,6 +127,7 @@ public class ValidadorSemanticoZ {
     private void procesarSwitch(NodoSentencia.Switch sw) {
         alcance.resolverExpresion(sw.expresion());
         tipos.tipoDeExpresion(sw.expresion());
+        tipos.validarTipoSwitch(sw.expresion());
         flujo.entrarSwitch();
 
         for (NodoSentencia.CasoSwitch caso : sw.casos()) {

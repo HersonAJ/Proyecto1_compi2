@@ -462,4 +462,26 @@ public class ValidadorTiposZ {
             default -> false;
         };
     }
+
+    /**
+     * Valida que la expresión de un switch sea de un tipo permitido:
+     * int, char, String o boolean.
+     */
+    public void validarTipoSwitch(NodoExpr expresion) {
+        TipoResuelto tipo = tipoDeExpresion(expresion);
+        if (tipo == null) return; // error previo
+
+        String base = tipo.base();
+        boolean valido = INT.equals(base)
+                || CHAR.equals(base)
+                || STRING.equals(base)
+                || BOOLEAN.equals(base);
+
+        if (!valido) {
+            errores.add(new ErrorSemantico(expresion.linea(), expresion.columna(),
+                    "Tipo incompatible en switch",
+                    "La expresión del switch debe ser 'int', 'char', 'String' o 'boolean', se encontró '"
+                            + base + "'"));
+        }
+    }
 }
