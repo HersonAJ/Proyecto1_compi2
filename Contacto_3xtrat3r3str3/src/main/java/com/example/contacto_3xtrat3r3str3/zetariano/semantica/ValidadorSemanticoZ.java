@@ -61,6 +61,7 @@ public class ValidadorSemanticoZ {
     }
 
     private void procesarBloque(List<NodoSentencia> bloque) {
+        flujo.validarCodigoInalcanzable(bloque);
         for (NodoSentencia s : bloque) procesarSentencia(s);
     }
 
@@ -77,7 +78,7 @@ public class ValidadorSemanticoZ {
                 NodoSentencia.Asignacion a = (NodoSentencia.Asignacion) s;
                 alcance.resolverExpresion(a.destino());
                 alcance.resolverExpresion(a.valor());
-                tipos.validarAsignacion(a.destino(), a.valor());
+                tipos.validarAsignacion(a.operador(), a.destino(), a.valor());
             }
             case EXPRESION_COMO_SENTENCIA -> {
                 NodoExpr expr = ((NodoSentencia.ExpresionComoSentencia) s).expresion();

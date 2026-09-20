@@ -136,11 +136,16 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     // DECLARACION Y ASIGNACION
     @Override
     public NodoAST visitDeclaracion(ZParser.DeclaracionContext ctx) {
-        String tipo = ctx.tipo().getText();
+        String tipo = ctx.tipoDeclaracion().tipo().getText();
+        int dimensiones = ctx.tipoDeclaracion().COR_IZQ().size();
         String nombre = ctx.ID().getText();
-        int dimensiones = ctx.COR_IZQ().size();
         NodoExpr inicializacion = ctx.inicializador() != null ? (NodoExpr) visit(ctx.inicializador()) : null;
         return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, dimensiones, inicializacion);
+    }
+
+    @Override
+    public NodoAST visitTipoDeclaracion(ZParser.TipoDeclaracionContext ctx) {
+        return null;
     }
 
     @Override

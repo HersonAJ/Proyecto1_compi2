@@ -54,8 +54,11 @@ sentencia   : declaracion
             ;
 
 //declaraciones: variable simple, objeto, o arreglo (1 o mas dimensiones via corchetes repetidos)
-declaracion : tipo ID (COR_IZQ COR_DER)* (IGUAL inicializador)? PUNTO_COMA
+declaracion : tipoDeclaracion ID (IGUAL inicializador)? PUNTO_COMA
             ;
+
+tipoDeclaracion : tipo (COR_IZQ COR_DER)*
+                ;
 
 //separado porque los arreglos aceptan la forma literal
 inicializador : LLAVE_IZQ listaExpresiones? LLAVE_DER

@@ -145,6 +145,16 @@ public class ValidadorTiposZ {
 
             case INCREMENTO_DECREMENTO -> {
                 NodoExpr.IncrementoDecremento inc = (NodoExpr.IncrementoDecremento) expr;
+
+                // Validar que el operando sea un lvalue válido (variable, arreglo[índice], objeto.atributo).
+                if (!esLValue(inc.operando())) {
+                    errores.add(new ErrorSemantico(inc.linea(), inc.columna(),
+                            "Operando inválido",
+                            "El operador '" + inc.operador() + "' solo se puede aplicar sobre una variable, "
+                                    + "un elemento de arreglo o un atributo"));
+                    yield null;
+                }
+
                 TipoResuelto operando = tipoDeExpresion(inc.operando());
                 if (operando != null && !esNumerico(operando.base())) {
                     errores.add(new ErrorSemantico(inc.linea(), inc.columna(),
@@ -314,15 +324,50 @@ public class ValidadorTiposZ {
         }
     }
 
-    public void validarAsignacion(NodoExpr destino, NodoExpr valor) {
+    /**
+     * Valida una asignación. Maneja tanto '=' como '+=' '-=' '*='.
+     * Para '+=' '-=' '*=', primero valida que la operación sea posible y
+     * luego que el resultado sea asignable al destino.
+     */
+    public void validarAsignacion(String operador, NodoExpr destino, NodoExpr valor) {
         TipoResuelto tipoDestino = tipoDeExpresion(destino);
         TipoResuelto tipoValor = tipoDeExpresion(valor);
         if (tipoDestino == null || tipoValor == null) return;
 
-        if (!esAsignable(tipoDestino, tipoValor)) {
+        // Asignación simple: el valor debe ser asignable al destino.
+        if ("=".equals(operador)) {
+            if (!esAsignable(tipoDestino, tipoValor)) {
+                errores.add(new ErrorSemantico(valor.linea(), valor.columna(),
+                        "Tipo incompatible",
+                        "No se puede asignar '" + tipoValor.base() + "' a algo de tipo '" + tipoDestino.base() + "'"));
+            }
+            return;
+        }
+
+        // Asignación compuesta: la operación debe dar un tipo asignable al destino.
+        // Para '+=' con String, la operación es concatenación.
+        // Para '-=' y '*=', la operación es aritmética.
+        String operadorBinario = switch (operador) {
+            case "+=" -> "+";
+            case "-=" -> "-";
+            case "*=" -> "*";
+            default -> null;
+        };
+
+        if (operadorBinario == null) return;
+
+        // Calcular el tipo resultante de la operación simulada.
+        TipoResuelto tipoResultado = tipoResultanteBinaria(
+                operadorBinario, tipoDestino, tipoValor, destino.linea(), destino.columna());
+
+        if (tipoResultado == null) return;
+
+        // El resultado debe ser asignable al destino.
+        if (!esAsignable(tipoDestino, tipoResultado)) {
             errores.add(new ErrorSemantico(valor.linea(), valor.columna(),
                     "Tipo incompatible",
-                    "No se puede asignar '" + tipoValor.base() + "' a algo de tipo '" + tipoDestino.base() + "'"));
+                    "El resultado de '" + operador + "' ('" + tipoResultado.base()
+                            + "') no se puede asignar al destino de tipo '" + tipoDestino.base() + "'"));
         }
     }
 
@@ -404,5 +449,17 @@ public class ValidadorTiposZ {
             if (!esAsignable(destino, tiposArgs.get(i))) return false;
         }
         return true;
+    }
+
+    /**
+     * Determina si una expresión puede ser destino de ++/-- o de una asignación.
+     * Solo los identificadores, accesos a arreglo y accesos a atributo son válidos.
+     */
+    private boolean esLValue(NodoExpr expr) {
+        if (expr == null) return false;
+        return switch (expr.tipoNodo()) {
+            case IDENTIFICADOR, ACCESO_ARRAY, ACCESO_ATRIBUTO -> true;
+            default -> false;
+        };
     }
 }
