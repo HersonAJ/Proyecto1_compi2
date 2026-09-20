@@ -30,15 +30,23 @@ public class ValidadorSemanticoZ {
             alcance.validarTipoDeclarado(a.tipo(), a.linea(), a.columna());
         }
 
+        // LOOP 1: CONSTRUCTORES
         for (NodoConstructor c : clase.constructores()) {
+
             validarTiposDeParametros(c.parametros());
             tipoRetornoActual = null;
             procesarCuerpoConParametros(c.parametros(), c.cuerpo());
         }
+
+        // LOOP 2: METODOS
         for (NodoMetodo m : clase.metodos()) {
+            System.out.println("DEBUG método: " + m.nombre()
+                    + " | tipoRetorno: " + m.tipoRetorno()
+                    + " | instrucciones: " + m.cuerpo().size());
             validarTiposDeParametros(m.parametros());
             tipoRetornoActual = m.tipoRetorno();
             procesarCuerpoConParametros(m.parametros(), m.cuerpo());
+            flujo.validarRetornoGarantizado(m.tipoRetorno(), m.cuerpo(), m.linea(), m.columna());
         }
 
         return errores;
