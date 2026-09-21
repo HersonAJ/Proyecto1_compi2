@@ -1,5 +1,7 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
+import com.example.contacto_3xtrat3r3str3.piglatin.service.ResultadoCompilacionPig;
+import com.example.contacto_3xtrat3r3str3.piglatin.service.ServicioCompilacionPig;
 import com.example.contacto_3xtrat3r3str3.ui.modelo.Lenguaje;
 import com.example.contacto_3xtrat3r3str3.y.errores.ErrorPosicional;
 import com.example.contacto_3xtrat3r3str3.y.errores.ResultadoCompilacionY;
@@ -30,6 +32,7 @@ public class VentanaPrincipal {
     private final PanelSalida panelSalida;
     private final ServicioCompilacionY servicioY = new ServicioCompilacionY();
     private final ServicioCompilacionZ servicioZ = new ServicioCompilacionZ();
+    private final ServicioCompilacionPig servicioPig = new ServicioCompilacionPig();
 
     public VentanaPrincipal(Stage stage) {
         this.stage = stage;
@@ -265,8 +268,10 @@ public class VentanaPrincipal {
             compilarY(editor);
         } else if (lenguaje == Lenguaje.ZETARIANO) {
             compilarZ(editor);
+        } else if (lenguaje == Lenguaje.PIG_LATIN) {
+            compilarPig(editor);
         } else {
-            panelSalida.agregarError("UI", -1, -1,"Aún no hay compilador para " + lenguaje.getNombreVisible() + ".");
+            panelSalida.agregarError("UI", -1, -1, "Aún no hay compilador para " + lenguaje.getNombreVisible() + ".");
             panelSalida.enfocarErrores();
         }
     }
@@ -331,5 +336,66 @@ public class VentanaPrincipal {
         l.setMaxHeight(Double.MAX_VALUE);
         l.setStyle("-fx-alignment: center; -fx-text-fill: #888; -fx-border-color: #ccc;");
         return l;
+    }
+
+    private void compilarPig(EditorCodigo editor) {
+        panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como Pig Latin");
+
+        // Determinar la carpeta raíz para las importaciones.
+        File carpetaRaiz = obtenerCarpetaRaiz(editor);
+
+        if (carpetaRaiz == null) {
+            panelSalida.agregarError("UI", -1, -1,
+                    "No se pudo determinar la carpeta raíz para las importaciones.");
+            panelSalida.enfocarErrores();
+            return;
+        }
+
+        ResultadoCompilacionPig resultado = servicioPig.analizar(
+                editor.getTexto(),
+                carpetaRaiz.toPath()
+        );
+
+        for (ErrorPosicional e : resultado.getErroresLexicos()) {
+            panelSalida.agregarError("Léxico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorPosicional e : resultado.getErroresSintacticos()) {
+            panelSalida.agregarError("Sintáctico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorSemantico e : resultado.getErroresSemanticos()) {
+            panelSalida.agregarError(e.categoria(), e.linea(), e.columna(), e.mensaje());
+        }
+        for (String e : resultado.getMensajesInternos()) {
+            panelSalida.agregarError("Interno", -1, -1, e);
+        }
+
+        if (resultado.isExitoso()) {
+            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+        } else {
+            panelSalida.imprimirConsola(
+                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.enfocarErrores();
+        }
+    }
+
+    /**
+     * Determina la carpeta raíz para resolver importaciones:
+     *   - Si hay carpeta abierta en el árbol, usarla.
+     *   - Si no, usar el directorio del archivo .pig actual.
+     */
+    private File obtenerCarpetaRaiz(EditorCodigo editor) {
+        // 1. Intentar con la raíz del árbol de trabajo.
+        if (arbol.getRoot() != null && arbol.getRoot().getValue() != null) {
+            File raiz = arbol.getRoot().getValue();
+            if (raiz.isDirectory()) return raiz;
+        }
+
+        // 2. Fallback: directorio del archivo .pig.
+        File archivoActual = editor.getArchivoActual();
+        if (archivoActual != null) {
+            return archivoActual.getParentFile();
+        }
+
+        return null;
     }
 }

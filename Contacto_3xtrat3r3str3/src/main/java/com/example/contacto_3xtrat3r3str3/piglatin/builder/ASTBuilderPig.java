@@ -95,8 +95,14 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
 
         // Caso 2: expresión (por ejemplo, novus Persona(...))
         NodoExpr inicializacion = (NodoExpr) visit(ctx.expr());
-        // El tipo se resuelve en el análisis semántico
-        return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), null, nombre, inicializacion);
+
+        // Si es una instancia de objeto, extraer el tipo de ahí.
+        String tipo = null;
+        if (inicializacion instanceof NodoExpr.InstanciaObjeto inst) {
+            tipo = inst.tipoClase();
+        }
+
+        return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, inicializacion);
     }
 
     @Override
