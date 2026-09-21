@@ -21,7 +21,7 @@ public class ValidadorDeclaracionesZ {
     }
 
     public void declararAtributos(NodoClase clase) {
-        for (NodoAtributo a: clase.atributos()) {
+        for (NodoAtributoZ a: clase.atributos()) {
             if (!tabla.declararAtributo(a.nombre(), a.tipo(), 0)) {
                 errores.add(new ErrorSemantico(a.linea(), a.columna(), "Declaracion duplicada",
                         "El atributo '" + a.nombre() + "' ya fue declarado en la clase"));
@@ -57,9 +57,9 @@ public class ValidadorDeclaracionesZ {
         }
     }
 
-    private List<TablaSimbolosZ.Parametro> construirParametros(List<NodoParametro> nodos, String nombreDueño) {
+    private List<TablaSimbolosZ.Parametro> construirParametros(List<NodoParametroZ> nodos, String nombreDueño) {
         List<TablaSimbolosZ.Parametro> parametros = new ArrayList<>();
-        for (NodoParametro p : nodos) {
+        for (NodoParametroZ p : nodos) {
             boolean yaExiste = parametros.stream().anyMatch(x -> x.nombre().equals(p.nombre()));
             if (yaExiste) {
                 errores.add(new ErrorSemantico(p.linea(), p.columna(), "Declaracion duplicada",
@@ -72,8 +72,8 @@ public class ValidadorDeclaracionesZ {
     }
 
     //registrar los parametros como variables del scope local, al entrar al cuerpo de un constructor/metod
-    public void declararParametrosEnScope(List<NodoParametro> parametros) {
-        for (NodoParametro p : parametros) {
+    public void declararParametrosEnScope(List<NodoParametroZ> parametros) {
+        for (NodoParametroZ p : parametros) {
             tabla.declararVariable(p.nombre(), p.tipo());
         }
     }

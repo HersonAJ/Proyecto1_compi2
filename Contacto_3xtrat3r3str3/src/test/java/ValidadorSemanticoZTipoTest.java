@@ -33,23 +33,23 @@ class ValidadorSemanticoZTiposTest {
         //     }
         // }
 
-        NodoAtributo atrEdad = new NodoAtributo(2, 4, "int", "edad");
+        NodoAtributoZ atrEdad = new NodoAtributoZ(2, 4, "int", "edad");
 
-        NodoParametro paramEdad = new NodoParametro(4, 20, "int", "edadParametro");
+        NodoParametroZ paramEdad = new NodoParametroZ(4, 20, "int", "edadParametro");
         NodoSentencia asignaEdad = new NodoSentencia.Asignacion(5, 8, "=",
                 new NodoExpr.Identificador(5, 8, "edad"),
                 new NodoExpr.Identificador(5, 15, "edadParametro"));
         NodoConstructor constructor = new NodoConstructor(4, 4, "Persona",
                 List.of(paramEdad), List.of(asignaEdad));
 
-        NodoParametro paramAnioActual = new NodoParametro(8, 40, "int", "anioActual");
+        NodoParametroZ paramAnioActual = new NodoParametroZ(8, 40, "int", "anioActual");
         NodoExpr resta = new NodoExpr.Binaria(9, 15, "-",
                 new NodoExpr.Identificador(9, 15, "anioActual"),
                 new NodoExpr.Identificador(9, 28, "edad"));
         NodoMetodo calcularAnio = new NodoMetodo(8, 4, "calcularAnioNacimiento",
                 List.of(paramAnioActual), "int", List.of(new NodoSentencia.Retorno(9, 8, resta)));
 
-        NodoParametro paramBono = new NodoParametro(12, 30, "double", "bono");
+        NodoParametroZ paramBono = new NodoParametroZ(12, 30, "double", "bono");
         NodoExpr suma = new NodoExpr.Binaria(13, 15, "+",
                 new NodoExpr.Identificador(13, 15, "edad"),
                 new NodoExpr.Identificador(13, 22, "bono"));

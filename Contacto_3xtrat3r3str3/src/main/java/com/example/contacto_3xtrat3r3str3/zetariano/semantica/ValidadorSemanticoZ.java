@@ -26,7 +26,7 @@ public class ValidadorSemanticoZ {
         declaraciones.declararConstructores(clase);
         declaraciones.declararMetodos(clase);
 
-        for (NodoAtributo a : clase.atributos()) {
+        for (NodoAtributoZ a : clase.atributos()) {
             alcance.validarTipoDeclarado(a.tipo(), a.linea(), a.columna());
         }
 
@@ -50,7 +50,7 @@ public class ValidadorSemanticoZ {
     }
 
 
-    private void procesarCuerpoConParametros(List<NodoParametro> parametros, List<NodoSentencia> cuerpo) {
+    private void procesarCuerpoConParametros(List<NodoParametroZ> parametros, List<NodoSentencia> cuerpo) {
         tabla.entrarScope("miembro");
         declaraciones.declararParametrosEnScope(parametros);
         procesarBloque(cuerpo);
@@ -175,8 +175,8 @@ public class ValidadorSemanticoZ {
         tipos.validarCondicionBooleana(c.condicion());
     }
 
-    private void validarTiposDeParametros(List<NodoParametro> parametros) {
-        for (NodoParametro p : parametros) {
+    private void validarTiposDeParametros(List<NodoParametroZ> parametros) {
+        for (NodoParametroZ p : parametros) {
             alcance.validarTipoDeclarado(p.tipo(), p.linea(), p.columna());
         }
     }

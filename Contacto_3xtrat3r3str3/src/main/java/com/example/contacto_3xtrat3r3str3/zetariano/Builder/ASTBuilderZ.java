@@ -22,13 +22,13 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     public NodoAST visitClaseDefinicion(ZParser.ClaseDefinicionContext ctx) {
         String nombre = ctx.ID().getText();
 
-        List<NodoAtributo> atributos = new ArrayList<>();
+        List<NodoAtributoZ> atributos = new ArrayList<>();
         List<NodoConstructor> constructores = new ArrayList<>();
         List<NodoMetodo> metodos = new ArrayList<>();
 
         for (ZParser.MiembroClaseContext m : ctx.miembroClase()) {
             NodoAST nodo = visit(m);
-            if (nodo instanceof NodoAtributo a) atributos.add(a);
+            if (nodo instanceof NodoAtributoZ a) atributos.add(a);
             else if (nodo instanceof NodoConstructor c) constructores.add(c);
             else if (nodo instanceof NodoMetodo me) metodos.add(me);
         }
@@ -46,13 +46,13 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     public NodoAST visitAtributo(ZParser.AtributoContext ctx) {
         String tipo = ctx.tipo().getText();
         String nombre = ctx.ID().getText();
-        return new NodoAtributo(linea(ctx), columna(ctx), tipo, nombre);
+        return new NodoAtributoZ(linea(ctx), columna(ctx), tipo, nombre);
     }
 
     @Override
     public NodoAST visitConstructor(ZParser.ConstructorContext ctx) {
         String nombre = ctx.ID().getText();
-        List<NodoParametro> parametros = construirParametros(ctx.parametros());
+        List<NodoParametroZ> parametros = construirParametros(ctx.parametros());
         List<NodoSentencia> cuerpo = construirBloque(ctx.bloque());
         return new NodoConstructor(linea(ctx), columna(ctx), nombre, parametros, cuerpo);
     }
@@ -61,22 +61,22 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     public NodoAST visitMetodo(ZParser.MetodoContext ctx) {
         String nombre = ctx.ID().getText();
         String tipoRetorno = ctx.VOID() != null ? null : ctx.tipo().getText();
-        List<NodoParametro> parametros = construirParametros(ctx.parametros());
+        List<NodoParametroZ> parametros = construirParametros(ctx.parametros());
         List<NodoSentencia> cuerpo = construirBloque(ctx.bloque());
         return new NodoMetodo(linea(ctx), columna(ctx), nombre, parametros, tipoRetorno, cuerpo);
     }
 
     @Override
     public NodoAST visitParametro(ZParser.ParametroContext ctx) {
-        return new NodoParametro(linea(ctx), columna(ctx), ctx.tipo().getText(), ctx.ID().getText());
+        return new NodoParametroZ(linea(ctx), columna(ctx), ctx.tipo().getText(), ctx.ID().getText());
     }
 
-    private List<NodoParametro> construirParametros(ZParser.ParametrosContext ctx) {
-        List<NodoParametro> parametros = new ArrayList<>();
+    private List<NodoParametroZ> construirParametros(ZParser.ParametrosContext ctx) {
+        List<NodoParametroZ> parametros = new ArrayList<>();
         if (ctx == null) return parametros;
         for (ZParser.ParametroContext p : ctx.parametro()) {
             NodoAST nodo = visit(p);
-            if (nodo instanceof NodoParametro param) parametros.add(param);
+            if (nodo instanceof NodoParametroZ param) parametros.add(param);
         }
         return parametros;
     }

@@ -35,12 +35,12 @@ class ValidadorSemanticoZTest {
         //     }
         // }
 
-        NodoAtributo atrNombre = new NodoAtributo(2, 4, "String", "nombre");
-        NodoAtributo atrEdad = new NodoAtributo(3, 4, "int", "edad");
+        NodoAtributoZ atrNombre = new NodoAtributoZ(2, 4, "String", "nombre");
+        NodoAtributoZ atrEdad = new NodoAtributoZ(3, 4, "int", "edad");
 
         // --- constructor con parametros ---
-        NodoParametro paramNombre = new NodoParametro(6, 20, "String", "nombreParametro");
-        NodoParametro paramEdad = new NodoParametro(6, 40, "int", "edadParametro");
+        NodoParametroZ paramNombre = new NodoParametroZ(6, 20, "String", "nombreParametro");
+        NodoParametroZ paramEdad = new NodoParametroZ(6, 40, "int", "edadParametro");
 
         NodoSentencia asignaNombre = new NodoSentencia.Asignacion(7, 8, "=",
                 new NodoExpr.Identificador(7, 8, "nombre"),
@@ -76,7 +76,7 @@ class ValidadorSemanticoZTest {
         NodoMetodo saludar = new NodoMetodo(16, 4, "saludar", List.of(), null, List.of(imprimirSaludo));
 
         // --- metodo calcularAnioNacimiento(int anioActual) -> int ---
-        NodoParametro paramAnioActual = new NodoParametro(20, 40, "int", "anioActual");
+        NodoParametroZ paramAnioActual = new NodoParametroZ(20, 40, "int", "anioActual");
         NodoExpr resta = new NodoExpr.Binaria(21, 15, "-",
                 new NodoExpr.Identificador(21, 15, "anioActual"),
                 new NodoExpr.Identificador(21, 28, "edad"));

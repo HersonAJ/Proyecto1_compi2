@@ -1,0 +1,223 @@
+package com.example.contacto_3xtrat3r3str3.piglatin.semantica;
+
+import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoImportacion;
+import com.example.contacto_3xtrat3r3str3.y.ast.*;
+import com.example.contacto_3xtrat3r3str3.y.errores.ResultadoCompilacionY;
+import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
+import com.example.contacto_3xtrat3r3str3.y.service.ServicioCompilacionY;
+import com.example.contacto_3xtrat3r3str3.zetariano.nodo.*;
+import com.example.contacto_3xtrat3r3str3.zetariano.service.ResultadoCompilacionZ;
+import com.example.contacto_3xtrat3r3str3.zetariano.service.ServicioCompilacionZ;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Carga las importaciones de PigLatin en la tabla de símbolos.
+ *
+ * Soporta dos tipos:
+ *   - import carpeta.Archivo.y  → carga estructuras y funciones de Y?.
+ *   - import carpeta.Archivo.z  → carga la clase pública de Zetariano.
+ *
+ * Si un archivo importado tiene errores, se reportan y se aborta.
+ */
+public class ValidadorImportacionesPig {
+
+    private final TablaSimbolosPig tabla;
+    private final List<ErrorSemantico> errores;
+    private final Path carpetaRaiz;
+
+    public ValidadorImportacionesPig(TablaSimbolosPig tabla,
+                                     List<ErrorSemantico> errores,
+                                     Path carpetaRaiz) {
+        this.tabla = tabla;
+        this.errores = errores;
+        this.carpetaRaiz = carpetaRaiz;
+    }
+
+    //Procesa todas las importaciones del programa. Devuelve true si todas se cargaron correctamente.
+    public boolean procesarImportaciones(List<NodoImportacion> importaciones) {
+        boolean todasOk = true;
+
+        for (NodoImportacion imp : importaciones) {
+            boolean ok = procesarImportacion(imp);
+            if (!ok) todasOk = false;
+        }
+
+        return todasOk;
+    }
+
+    private boolean procesarImportacion(NodoImportacion imp) {
+        String ruta = imp.ruta();
+
+        // Determinar la extensión (.y o .z)
+        if (ruta.endsWith(".y")) {
+            return importarY(ruta, imp);
+        } else if (ruta.endsWith(".z")) {
+            return importarZ(ruta, imp);
+        } else {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Importación inválida",
+                    "La ruta '" + ruta + "' no termina en '.y' ni en '.z'"));
+            return false;
+        }
+    }
+
+    // IMPORTAR DE .y
+    private boolean importarY(String ruta, NodoImportacion imp) {
+        // Convertir 'carpeta.Archivo.y' a 'carpeta/Archivo.y'
+        String rutaRelativa = ruta.replace(".", "/");
+        if (!rutaRelativa.endsWith(".y")) {
+            rutaRelativa = rutaRelativa + ".y";
+        }
+
+        // Resolver la ruta absoluta
+        Path archivo = carpetaRaiz.resolve(rutaRelativa);
+
+        if (!Files.exists(archivo)) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Archivo no encontrado",
+                    "No se encontró el archivo '" + ruta + "' en '" + archivo.toAbsolutePath() + "'"));
+            return false;
+        }
+
+        // Leer contenido
+        String contenido;
+        try {
+            contenido = Files.readString(archivo);
+        } catch (IOException e) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Error al leer archivo",
+                    "No se pudo leer '" + archivo.toAbsolutePath() + "': " + e.getMessage()));
+            return false;
+        }
+
+        // Ejecutar el servicio de Y?
+        ServicioCompilacionY servicioY = new ServicioCompilacionY();
+        ResultadoCompilacionY resultado = servicioY.analizar(contenido);
+
+        if (!resultado.isExitoso()) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Error en archivo importado",
+                    "El archivo '" + ruta + "' tiene errores: "
+                            + resultado.getErroresSemanticos().size() + " semánticos, "
+                            + resultado.getErroresSintacticos().size() + " sintácticos"));
+            return false;
+        }
+
+        // Cargar estructuras
+        if (resultado.getPrograma() != null) {
+            for (NodoEstructura est : resultado.getPrograma().estructuras()) {
+                NodoEstructura.Estructura e = (NodoEstructura.Estructura) est;
+                Map<String, String> atributos = new LinkedHashMap<>();
+                for (NodoAtributo a : e.atributos()) {
+                    NodoAtributo.Atributo at = (NodoAtributo.Atributo) a;
+                    String tipo = at.tipoPrimitivo() != null ? at.tipoPrimitivo() : at.tipoEstructura();
+                    atributos.put(at.nombre(), tipo);
+                }
+                tabla.declararEstructura(e.nombre(), atributos);
+            }
+
+            // Cargar funciones
+            for (NodoFuncion f : resultado.getPrograma().funciones()) {
+                NodoFuncion.Funcion fn = (NodoFuncion.Funcion) f;
+                List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
+                for (NodoParametro p : fn.parametros()) {
+                    NodoParametro.Parametro param = (NodoParametro.Parametro) p;
+                    String tipo = param.tipoPrimitivo() != null ? param.tipoPrimitivo() : param.tipoEstructura();
+                    params.add(new TablaSimbolosPig.Parametro(
+                            param.nombre(), tipo, param.esArreglo() ? 1 : 0));
+                }
+                tabla.declararFuncion(fn.nombre(), params, fn.tipoRetorno());
+            }
+        }
+
+        return true;
+    }
+
+
+    // IMPORTAR DE .z
+    private boolean importarZ(String ruta, NodoImportacion imp) {
+        // Convertir 'carpeta.Archivo.z' a 'carpeta/Archivo.z'
+        String rutaRelativa = ruta.replace(".", "/");
+        if (!rutaRelativa.endsWith(".z")) {
+            rutaRelativa = rutaRelativa + ".z";
+        }
+
+        Path archivo = carpetaRaiz.resolve(rutaRelativa);
+
+        if (!Files.exists(archivo)) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Archivo no encontrado",
+                    "No se encontró el archivo '" + ruta + "' en '" + archivo.toAbsolutePath() + "'"));
+            return false;
+        }
+
+        String contenido;
+        try {
+            contenido = Files.readString(archivo);
+        } catch (IOException e) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Error al leer archivo",
+                    "No se pudo leer '" + archivo.toAbsolutePath() + "': " + e.getMessage()));
+            return false;
+        }
+
+        // Ejecutar el servicio de Z
+        ServicioCompilacionZ servicioZ = new ServicioCompilacionZ();
+        ResultadoCompilacionZ resultado = servicioZ.analizar(contenido);
+
+        if (!resultado.isExitoso()) {
+            errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                    "Error en archivo importado",
+                    "El archivo '" + ruta + "' tiene errores: "
+                            + resultado.getErroresSemanticos().size() + " semánticos, "
+                            + resultado.getErroresSintacticos().size() + " sintácticos"));
+            return false;
+        }
+
+        // Cargar la clase
+        if (resultado.getPrograma() != null) {
+            NodoClase clase = resultado.getPrograma().clase();
+
+            // Atributos
+            Map<String, TablaSimbolosPig.AtributoClase> atributos = new LinkedHashMap<>();
+            for (NodoAtributoZ a : clase.atributos()) {
+                atributos.put(a.nombre(), new TablaSimbolosPig.AtributoClase(
+                        a.nombre(), a.tipo(), 0));
+            }
+
+            // Constructores
+            List<TablaSimbolosPig.Firma> constructores = new ArrayList<>();
+            for (NodoConstructor c : clase.constructores()) {
+                List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
+                for (NodoParametroZ p : c.parametros()) {
+                    params.add(new TablaSimbolosPig.Parametro(p.nombre(), p.tipo(), 0));
+                }
+                constructores.add(new TablaSimbolosPig.Firma(c.nombre(), params, null));
+            }
+
+            // Métodos
+            List<TablaSimbolosPig.Firma> metodos = new ArrayList<>();
+            for (NodoMetodo m : clase.metodos()) {
+                List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
+                for (NodoParametroZ p : m.parametros()) {
+                    params.add(new TablaSimbolosPig.Parametro(p.nombre(), p.tipo(), 0));
+                }
+                metodos.add(new TablaSimbolosPig.Firma(m.nombre(), params, m.tipoRetorno()));
+            }
+
+            TablaSimbolosPig.DefinicionClase def = new TablaSimbolosPig.DefinicionClase(
+                    clase.nombre(), atributos, constructores, metodos);
+            tabla.declararClase(def);
+        }
+
+        return true;
+    }
+}

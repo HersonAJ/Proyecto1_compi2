@@ -4,6 +4,6 @@ import java.util.List;
 
 public record NodoClase(
         int linea, int columna, String nombre,
-        List<NodoAtributo> atributos,
+        List<NodoAtributoZ> atributos,
         List<NodoConstructor> constructores,
         List<NodoMetodo> metodos) implements NodoAST { }

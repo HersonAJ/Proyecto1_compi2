@@ -6,6 +6,6 @@ import java.util.List;
  //public int calcularAnioNacimiento(int anioActual) { ... }
  //tipoRetorno es null cuando el metodo es 'void'.
 public record NodoMetodo(int linea, int columna, String nombre,
-                         List<NodoParametro> parametros,
+                         List<NodoParametroZ> parametros,
                          String tipoRetorno,
                          List<NodoSentencia> cuerpo) implements NodoAST {}
