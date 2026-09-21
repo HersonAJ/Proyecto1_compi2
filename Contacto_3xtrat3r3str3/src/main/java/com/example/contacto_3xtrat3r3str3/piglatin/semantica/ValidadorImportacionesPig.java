@@ -72,10 +72,7 @@ public class ValidadorImportacionesPig {
     // IMPORTAR DE .y
     private boolean importarY(String ruta, NodoImportacion imp) {
         // Convertir 'carpeta.Archivo.y' a 'carpeta/Archivo.y'
-        String rutaRelativa = ruta.replace(".", "/");
-        if (!rutaRelativa.endsWith(".y")) {
-            rutaRelativa = rutaRelativa + ".y";
-        }
+        String rutaRelativa = convertirRuta(ruta);
 
         // Resolver la ruta absoluta
         Path archivo = carpetaRaiz.resolve(rutaRelativa);
@@ -145,10 +142,7 @@ public class ValidadorImportacionesPig {
     // IMPORTAR DE .z
     private boolean importarZ(String ruta, NodoImportacion imp) {
         // Convertir 'carpeta.Archivo.z' a 'carpeta/Archivo.z'
-        String rutaRelativa = ruta.replace(".", "/");
-        if (!rutaRelativa.endsWith(".z")) {
-            rutaRelativa = rutaRelativa + ".z";
-        }
+        String rutaRelativa = convertirRuta(ruta);
 
         Path archivo = carpetaRaiz.resolve(rutaRelativa);
 
@@ -219,5 +213,16 @@ public class ValidadorImportacionesPig {
         }
 
         return true;
+    }
+
+    //Convierte 'carpeta.Archivo.y' → 'carpeta/Archivo.y'. El último punto (extensión) se conserva
+    private String convertirRuta(String ruta) {
+        int ultimoPunto = ruta.lastIndexOf('.');
+        if (ultimoPunto < 0) return ruta;
+
+        String sinExtension = ruta.substring(0, ultimoPunto);
+        String extension = ruta.substring(ultimoPunto);
+
+        return sinExtension.replace(".", "/") + extension;
     }
 }

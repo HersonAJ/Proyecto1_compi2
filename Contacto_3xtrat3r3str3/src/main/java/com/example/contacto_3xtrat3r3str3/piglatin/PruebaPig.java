@@ -1,11 +1,7 @@
 package com.example.contacto_3xtrat3r3str3.piglatin;
 
-import com.example.contacto_3xtrat3r3str3.piglatin.builder.ASTBuilderPig;
-import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoAST;
-import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoPrograma;
-import com.example.piglatin.analizador.gramatica.PigLexer;
-import com.example.piglatin.analizador.gramatica.PigParser;
-import org.antlr.v4.runtime.*;
+import com.example.contacto_3xtrat3r3str3.piglatin.service.ResultadoCompilacionPig;
+import com.example.contacto_3xtrat3r3str3.piglatin.service.ServicioCompilacionPig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +12,7 @@ public class PruebaPig {
 
     public static void main(String[] args) {
         Path ruta = Paths.get("src/main/resources/ejemplos/ejemplo.pig");
+        Path carpetaRaiz = Paths.get("src/main/resources");
 
         if (!Files.exists(ruta)) {
             System.err.println("No existe: " + ruta.toAbsolutePath());
@@ -30,46 +27,31 @@ public class PruebaPig {
             return;
         }
 
-        // 1. LEXER
-        PigLexer lexer = new PigLexer(CharStreams.fromString(codigo));
-        lexer.removeErrorListeners();
-        lexer.addErrorListener(new BaseErrorListener() {
-            @Override
-            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
-                                    int line, int charPositionInLine, String msg,
-                                    RecognitionException e) {
-                System.err.println("Error lexico [" + line + ":" + charPositionInLine + "] " + msg);
-            }
-        });
+        ServicioCompilacionPig servicio = new ServicioCompilacionPig();
+        ResultadoCompilacionPig resultado = servicio.analizar(codigo, carpetaRaiz);
 
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        tokens.fill();
+        System.out.println("\n========================================");
+        System.out.println("RESULTADO DE LA COMPILACION");
+        System.out.println("========================================");
+        System.out.println("Exitoso: " + resultado.isExitoso());
 
-        // 2. PARSER
-        PigParser parser = new PigParser(tokens);
-        parser.removeErrorListeners();
-        parser.addErrorListener(new BaseErrorListener() {
-            @Override
-            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
-                                    int line, int charPositionInLine, String msg,
-                                    RecognitionException e) {
-                System.err.println("Error sintactico [" + line + ":" + charPositionInLine + "] " + msg);
-            }
-        });
-
-        PigParser.ProgramaContext tree = parser.programa();
-
-        // 3. AST
-        ASTBuilderPig builder = new ASTBuilderPig();
-        NodoAST nodo = builder.visit(tree);
-
-        if (nodo instanceof NodoPrograma programa) {
-            System.out.println("=== AST CONSTRUIDO ===");
-            System.out.println("Importaciones: " + programa.importaciones().size());
-            System.out.println("Variables globales: " + programa.variablesGlobales().size());
-            System.out.println("Sentencias en MAIOR: " + programa.cuerpoMain().size());
-        } else {
-            System.out.println("Error al construir AST");
+        if (!resultado.getErroresLexicos().isEmpty()) {
+            System.out.println("--- ERRORES LEXICOS ---");
+            resultado.getErroresLexicos().forEach(System.out::println);
         }
+        if (!resultado.getErroresSintacticos().isEmpty()) {
+            System.out.println("--- ERRORES SINTACTICOS ---");
+            resultado.getErroresSintacticos().forEach(System.out::println);
+        }
+        if (!resultado.getErroresSemanticos().isEmpty()) {
+            System.out.println("--- ERRORES SEMANTICOS ---");
+            resultado.getErroresSemanticos().forEach(System.out::println);
+        }
+        if (!resultado.getMensajesInternos().isEmpty()) {
+            System.out.println("--- MENSAJES INTERNOS ---");
+            resultado.getMensajesInternos().forEach(System.out::println);
+        }
+
+        System.out.println("========================================");
     }
 }

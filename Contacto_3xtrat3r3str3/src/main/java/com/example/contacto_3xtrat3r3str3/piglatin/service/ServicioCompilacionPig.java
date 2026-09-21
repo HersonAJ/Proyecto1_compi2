@@ -24,8 +24,7 @@ public class ServicioCompilacionPig {
 
     private static final boolean DEBUG = true;
 
-    public ResultadoCompilacionPig analizar(String codigoFuente) {
-
+    public ResultadoCompilacionPig analizar(String codigoFuente, java.nio.file.Path carpetaRaiz) {
         if (DEBUG) {
             System.out.println("=== INICIO ANALISIS PIGLATIN ===");
         }
@@ -39,7 +38,7 @@ public class ServicioCompilacionPig {
         }
 
         try {
-            return analizarInterno(codigoFuente);
+            return analizarInterno(codigoFuente, carpetaRaiz);
         } catch (StackOverflowError soe) {
             return new ResultadoCompilacionPig(
                     false, null,
@@ -56,7 +55,7 @@ public class ServicioCompilacionPig {
         }
     }
 
-    private ResultadoCompilacionPig analizarInterno(String codigoFuente) {
+    private ResultadoCompilacionPig analizarInterno(String codigoFuente, java.nio.file.Path carpetaRaiz) {
 
         // 1. LEXER
         List<ErrorPosicional> erroresLexicos = new ArrayList<>();
@@ -135,14 +134,27 @@ public class ServicioCompilacionPig {
             );
         }
 
-        // 4. VALIDACIÓN SEMÁNTICA (pendiente)
+        // 4. VALIDACIÓN SEMÁNTICA
         List<ErrorSemantico> erroresSemanticos = new ArrayList<>();
+        try {
+            com.example.contacto_3xtrat3r3str3.piglatin.semantica.ValidadorSemanticoPig validador =
+                    new com.example.contacto_3xtrat3r3str3.piglatin.semantica.ValidadorSemanticoPig(carpetaRaiz);
+            erroresSemanticos = validador.analizar(programa);
+        } catch (Exception e) {
+            if (DEBUG) e.printStackTrace();
+            return new ResultadoCompilacionPig(
+                    false, programa,
+                    List.of(), List.of(), List.of(),
+                    List.of("Error en validación semántica: " + e.getMessage())
+            );
+        }
 
         // 5. RESULTADO
         boolean exitoso = erroresSemanticos.isEmpty();
 
         if (DEBUG) {
             System.out.println("Análisis completado. Exitoso: " + exitoso);
+            System.out.println("  Errores semánticos: " + erroresSemanticos.size());
             System.out.println("=== FIN ANALISIS PIGLATIN ===");
         }
 

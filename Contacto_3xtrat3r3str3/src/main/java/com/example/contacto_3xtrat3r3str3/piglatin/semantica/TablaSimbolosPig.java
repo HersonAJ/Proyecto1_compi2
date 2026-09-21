@@ -60,12 +60,12 @@ public class TablaSimbolosPig {
     }
 
     //scope
-    public void entradaScope(String etiqueta) {
+    public void entrarScope(String etiqueta) {
         pila.push(new Scope(etiqueta));
     }
 
     public void entrarScope() {
-        entradaScope("bloque");
+        entrarScope("bloque");
     }
 
     public void salirScope() {
