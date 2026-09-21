@@ -8,6 +8,7 @@ public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.LiteralTexto,
         NodoExpr.LiteralCaracter,
         NodoExpr.LiteralBool,
+        NodoExpr.ListaLiteral,
         NodoExpr.Identificador,
         NodoExpr.AccesoArray,
         NodoExpr.AccesoAtributo,
@@ -38,6 +39,11 @@ public sealed interface NodoExpr extends NodoAST permits
 
     record LiteralBool(int linea, int columna, boolean valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_BOOL; }
+    }
+
+    // para '{1, 2, 3}' dentro de expresiones
+    record ListaLiteral(int linea, int columna, List<NodoExpr> elementos) implements NodoExpr {
+        @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LISTA_LITERAL; }
     }
 
     // ACCESOS

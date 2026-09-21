@@ -11,12 +11,13 @@ IMPORT : 'import' ;
 // Secciones del programa
 VARIABILES   : 'VARIABILES' ;
 MAIOR        : 'MAIOR' ;
-FIN_PROGRAMA : 'FINIS' ;
+FIN_PROGRAMA : 'FINIS' ;   // 'FINIS' mayuscula -> cierra todo el programa
 
 // Palabras reservadas
 ESTO         : 'esto' ;
 SERIES       : 'series' ;
 NOVUS        : 'novus' ;
+FINIS        : 'finis' ;   // 'finis' minuscula -> cierra un bloque (si/dum/facere-dum)
 SI           : 'si' ;
 ALITER       : 'aliter' ;
 DUM          : 'dum' ;
@@ -24,7 +25,6 @@ FACERE       : 'facere' ;
 PER          : 'per' ;
 PERGE        : 'perge' ;
 INTERRUMPE   : 'interrumpe' ;
-FIN_BLOQUE   : 'finis';
 
 // Tipos primitivos
 NUMERUS   : 'numerus' ;
@@ -72,5 +72,4 @@ INT     : [0-9]+ ;
 STRING  : '"' (~["\r\n])* '"' ;
 CHAR    : '\'' . '\'' ;
 
-// se reconoce como palabra reservada.
 ID : [a-zA-Z_][a-zA-Z0-9_]* ;

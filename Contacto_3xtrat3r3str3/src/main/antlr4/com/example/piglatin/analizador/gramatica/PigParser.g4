@@ -39,7 +39,7 @@ declaracionVar
 
 variable
     : ESTO ID DOSPUNTOS tipoPrimitivo expr? PUNTOCOMA
-    | ESTO ID DOSPUNTOS (VERUM | FALSUS) PUNTOCOMA
+    | ESTO ID DOSPUNTOS expr PUNTOCOMA
     ;
 
 tipoPrimitivo
@@ -79,6 +79,7 @@ sentencia
     | escritura
     | interrupcionCiclo
     | llamadaFuncion PUNTOCOMA
+    | llamadaMetodo PUNTOCOMA
     | incrementoDecremento
     ;
 
@@ -90,6 +91,11 @@ referencia
     : ID                                           # referenciaBase
     | referencia PUNTO ID                          # accesoAtributo
     | referencia CORCH_A expr CORCH_C              # accesoArray
+    ;
+
+//llamada a metodo usada como sentencia suelta, ej. 'misObjetos[9].hablar(miObjeto.getNombre());'
+llamadaMetodo
+    : referencia PUNTO ID PAR_A listaArgumentos? PAR_C
     ;
 
 incrementoDecremento
@@ -156,6 +162,7 @@ listaArgumentos
 expr
     : PAR_A expr PAR_C                                          # exprParentesis
     | NOVUS ID PAR_A listaArgumentos? PAR_C                     # exprInstanciaObjeto
+    | LLAVE_A listaExpr? LLAVE_C                                # exprLiteralCompuesto
     | (INC | DEC) ID                                            # exprIncDecPrefijo
     | ID (INC | DEC)                                            # exprIncDecPostfijo
     | expr op=(MULT | DIV) expr                                 # exprMulDiv

@@ -15,7 +15,8 @@ public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.Lectura,
         NodoSentencia.Escritura,
         NodoSentencia.InterrupcionCiclo,
-        NodoSentencia.LlamadaFuncionSentencia {
+        NodoSentencia.LlamadaFuncionSentencia,
+        NodoSentencia.LlamadaMetodoSentencia {
 
     TipoNodoSentencia tipoNodo();
 
@@ -90,5 +91,9 @@ public sealed interface NodoSentencia extends NodoAST permits
     // LLAMADA A FUNCION COMO SENTENCIA
     record LlamadaFuncionSentencia(int linea, int columna, NodoExpr.LlamadaFuncion llamada) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LLAMADA_FUNCION_SENTENCIA; }
+    }
+
+    record LlamadaMetodoSentencia(int linea, int columna, NodoExpr.LlamadaMetodo llamada) implements NodoSentencia {
+        @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LLAMADA_METODO_SENTENCIA; }
     }
 }

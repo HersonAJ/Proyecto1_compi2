@@ -86,20 +86,17 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
     public NodoAST visitVariable(PigParser.VariableContext ctx) {
         String nombre = ctx.ID().getText();
 
-        // Caso 1: booleano explícito
-        if (ctx.VERUM() != null || ctx.FALSUS() != null) {
-            String tipo = "bool";
-            NodoExpr valor = new NodoExpr.LiteralBool(linea(ctx), columna(ctx), ctx.VERUM() != null);
-            return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, valor);
+        // Caso 1: tipo primitivo con inicialización opcional
+        if (ctx.tipoPrimitivo() != null) {
+            String tipo = ctx.tipoPrimitivo().getText();
+            NodoExpr inicializacion = ctx.expr() != null ? (NodoExpr) visit(ctx.expr()) : null;
+            return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, inicializacion);
         }
 
-        // Caso 2: variable normal (tipo primitivo, con inicialización opcional)
-        String tipo = ctx.tipoPrimitivo() != null ? ctx.tipoPrimitivo().getText() : null;
-        NodoExpr inicializacion = ctx.expr() != null ? (NodoExpr) visit(ctx.expr()) : null;
-
-        // Caso 3: instancia de objeto: 'esto x : novus Persona(...)'
-        // Eso NO se declara con variable, se declara con exprInstanciaObjeto como inicializador.
-        return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, inicializacion);
+        // Caso 2: expresión (por ejemplo, novus Persona(...))
+        NodoExpr inicializacion = (NodoExpr) visit(ctx.expr());
+        // El tipo se resuelve en el análisis semántico
+        return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), null, nombre, inicializacion);
     }
 
     @Override
@@ -151,6 +148,14 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
     }
 
     @Override
+    public NodoAST visitLlamadaMetodo(PigParser.LlamadaMetodoContext ctx) {
+        NodoExpr objeto = (NodoExpr) visit(ctx.referencia());
+        String nombre = ctx.ID().getText();
+        List<NodoExpr> argumentos = construirArgumentos(ctx.listaArgumentos());
+        return new NodoExpr.LlamadaMetodo(linea(ctx), columna(ctx), objeto, nombre, argumentos);
+    }
+
+    @Override
     public NodoAST visitLiteralStruct(PigParser.LiteralStructContext ctx) {
         return null; // regla contenedora
     }
@@ -161,6 +166,12 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
 
     @Override
     public NodoAST visitSentencia(PigParser.SentenciaContext ctx) {
+        // Caso especial: llamada a metodo como sentencia
+        if (ctx.llamadaMetodo() != null) {
+            NodoExpr llamada = (NodoExpr) visit(ctx.llamadaMetodo());
+            return new NodoSentencia.LlamadaMetodoSentencia(linea(ctx), columna(ctx), (NodoExpr.LlamadaMetodo) llamada);
+        }
+        // Caso general: delegar al hijo
         return visit(ctx.getChild(0));
     }
 
@@ -199,19 +210,10 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
 
     @Override
     public NodoAST visitIncrementoDecremento(PigParser.IncrementoDecrementoContext ctx) {
-        // Caso 1: referencia ++ / --
-        if (ctx.referencia() != null) {
-            NodoExpr operando = (NodoExpr) visit(ctx.referencia());
-            String op = ctx.INC() != null ? "++" : "--";
-            return new NodoSentencia.IncrementoDecremento(linea(ctx), columna(ctx), op, operando, false);
-        }
-        // Caso 2: ++ / -- referencia
-        if (ctx.ID() != null) {
-            NodoExpr operando = new NodoExpr.Identificador(linea(ctx), columna(ctx), ctx.ID().getText());
-            String op = ctx.INC() != null ? "++" : "--";
-            return new NodoSentencia.IncrementoDecremento(linea(ctx), columna(ctx), op, operando, true);
-        }
-        return null;
+        NodoExpr operando = (NodoExpr) visit(ctx.referencia());
+        String op = ctx.INC() != null ? "++" : "--";
+        boolean prefijo = ctx.getChild(0) != ctx.referencia();
+        return new NodoSentencia.IncrementoDecremento(linea(ctx), columna(ctx), op, operando, prefijo);
     }
 
     // ============================================================
@@ -460,6 +462,18 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
     @Override
     public NodoAST visitExprOr(PigParser.ExprOrContext ctx) {
         return construirBinaria(ctx, ctx.expr(0), ctx.expr(1), "||");
+    }
+
+    @Override
+    public NodoAST visitExprLiteralCompuesto(PigParser.ExprLiteralCompuestoContext ctx) {
+        List<NodoExpr> elementos = new ArrayList<>();
+        if (ctx.listaExpr() != null) {
+            for (PigParser.ExprContext e : ctx.listaExpr().expr()) {
+                NodoAST nodo = visit(e);
+                if (nodo instanceof NodoExpr ne) elementos.add(ne);
+            }
+        }
+        return new NodoExpr.ListaLiteral(linea(ctx), columna(ctx), elementos);
     }
 
     @Override
