@@ -5,6 +5,7 @@ import com.example.contacto_3xtrat3r3str3.y.Builder.ASTBuilder;
 import com.example.contacto_3xtrat3r3str3.y.analizador.PreprocesadorIndentacion;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoAST;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoPrograma;
+import com.example.contacto_3xtrat3r3str3.y.semantica.ValidadorSemantico;
 import com.example.y.analizador.gramatica.YLexer;
 import com.example.y.analizador.gramatica.YParser;
 import org.antlr.v4.runtime.*;
@@ -55,8 +56,11 @@ public class PruebaC3DY {
             return;
         }
 
+        ValidadorSemantico semantica = new ValidadorSemantico();
+        semantica.analizar(programa);
+
         // 5. Generar cuartetas
-        GeneradorC3DY generador = new GeneradorC3DY();
+        GeneradorC3DY generador = new GeneradorC3DY(semantica.getTabla());
         List<Cuarteta> cuartetas = generador.generar(programa);
 
         // 6. Imprimir

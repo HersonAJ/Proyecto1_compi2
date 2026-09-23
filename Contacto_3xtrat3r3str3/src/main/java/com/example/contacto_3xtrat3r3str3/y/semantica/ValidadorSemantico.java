@@ -294,4 +294,8 @@ public class ValidadorSemantico {
     public List<ErrorSemantico> getErrores() {
         return errores;
     }
+
+    public TablaSimbolos getTabla() {
+        return tabla;
+    }
 }
