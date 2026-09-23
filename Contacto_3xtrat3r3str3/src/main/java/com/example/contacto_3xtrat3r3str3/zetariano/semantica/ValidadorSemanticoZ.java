@@ -184,4 +184,8 @@ public class ValidadorSemanticoZ {
         public List<ErrorSemantico> getErrores() {
         return errores;
     }
+
+    public TablaSimbolosZ getTabla() {
+        return tabla;
+    }
 }
