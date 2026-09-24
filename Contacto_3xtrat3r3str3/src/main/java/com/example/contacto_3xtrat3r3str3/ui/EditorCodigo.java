@@ -1,6 +1,8 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
+import com.example.contacto_3xtrat3r3str3.coloracion.PigHighlighter;
 import com.example.contacto_3xtrat3r3str3.coloracion.YHighlighter;
+import com.example.contacto_3xtrat3r3str3.coloracion.ZHighlighter;
 import com.example.contacto_3xtrat3r3str3.ui.modelo.Lenguaje;
 import javafx.application.Platform;
 import javafx.scene.layout.HBox;
@@ -69,7 +71,6 @@ public class EditorCodigo extends HBox {
     }
 
     // RESALTADO
-
     private void aplicarResaltado() {
         String texto = areaEdicion.getText();
         if (texto == null || texto.isEmpty()) {
@@ -79,16 +80,17 @@ public class EditorCodigo extends HBox {
         int caret = areaEdicion.getCaretPosition();
         int anchor = areaEdicion.getAnchor();
 
-        areaEdicion.setStyleSpans(
-                0,
-                YHighlighter.computeHighlighting(texto)
-        );
+        switch (lenguaje) {
+            case Y -> areaEdicion.setStyleSpans(0, YHighlighter.computeHighlighting(texto));
+            case ZETARIANO -> areaEdicion.setStyleSpans(0, ZHighlighter.computeHighlighting(texto));
+            case PIG_LATIN -> areaEdicion.setStyleSpans(0, PigHighlighter.computeHighlighting(texto));
+            default -> { /* sin resaltado */ }
+        }
 
         try {
             areaEdicion.selectRange(anchor, caret);
         } catch (Exception ignored) {
         }
-        System.out.println("Resaltando " + texto.length() + " caracteres");
     }
 
     // ---------- API ----------
