@@ -16,12 +16,17 @@ public class MainApp extends Application {
                         .toExternalForm()
         );
 
+        scene.getStylesheets().add(
+                MainApp.class.getResource("/com/example/contacto_3xtrat3r3str3/ui/y-syntax.css")
+                        .toExternalForm()
+        );
+
         stage.setTitle("Contacto 3xtrat3rr3str3D");
         stage.setScene(scene);
         stage.show();
     }
 
-    public static void main(String[] args) {
-        launch(args);
-    }
+   // public static void main(String[] args) {
+        //launch(args);
+   // }
 }

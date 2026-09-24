@@ -1,5 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
+import com.example.contacto_3xtrat3r3str3.coloracion.YHighlighter;
 import com.example.contacto_3xtrat3r3str3.ui.modelo.Lenguaje;
 import javafx.application.Platform;
 import javafx.scene.layout.HBox;
@@ -8,6 +9,7 @@ import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.File;
+import java.time.Duration;
 
 public class EditorCodigo extends HBox {
 
@@ -46,12 +48,16 @@ public class EditorCodigo extends HBox {
         areaEdicion.setWrapText(false);
         HBox.setHgrow(areaEdicion, Priority.ALWAYS);
 
+        // RESALTADO
+        // Recalcular el highlighting cada 300ms tras la última pulsación.
+        areaEdicion.multiPlainChanges()
+                .successionEnds(Duration.ofMillis(300))
+                .subscribe(ignore -> aplicarResaltado());
         getChildren().add(areaEdicion);
         areaEdicion.textProperty().addListener(
                 (obs, viejo, nuevo) -> {
                     if (!modificado) {
                         modificado = true;
-
                         if (onModificado != null) {
                             onModificado.run();
                         }
@@ -60,6 +66,29 @@ public class EditorCodigo extends HBox {
         );
 
         Platform.runLater(areaEdicion::requestFocus);
+    }
+
+    // RESALTADO
+
+    private void aplicarResaltado() {
+        String texto = areaEdicion.getText();
+        if (texto == null || texto.isEmpty()) {
+            return;
+        }
+
+        int caret = areaEdicion.getCaretPosition();
+        int anchor = areaEdicion.getAnchor();
+
+        areaEdicion.setStyleSpans(
+                0,
+                YHighlighter.computeHighlighting(texto)
+        );
+
+        try {
+            areaEdicion.selectRange(anchor, caret);
+        } catch (Exception ignored) {
+        }
+        System.out.println("Resaltando " + texto.length() + " caracteres");
     }
 
     // ---------- API ----------
@@ -77,12 +106,9 @@ public class EditorCodigo extends HBox {
             }
         }
 
-        areaEdicion.replaceText(
-                contenido != null ? contenido : ""
-        );
-
-        // Cargar un archivo no debe dejarlo marcado como modificado
+        areaEdicion.replaceText(contenido != null ? contenido : "");
         modificado = false;
+        Platform.runLater(this::aplicarResaltado);
     }
 
     public void marcarComoGuardado() {
@@ -135,6 +161,7 @@ public class EditorCodigo extends HBox {
 
     public void setTexto(String texto) {
         areaEdicion.replaceText(texto != null ? texto : "");
+        Platform.runLater(this::aplicarResaltado);
     }
 
     public void pedirFoco() {

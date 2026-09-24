@@ -80,6 +80,6 @@ CARACTER_LIT    : '\'' (~['\r\n\\] | '\\' .) '\'';
 ID  : [a-zA-Z_][a-zA-Z0-9]*;
 
 //comentarios y espacios en blanco
-COMENTARIO_LINEA    : '//' ~[\r\n]* -> skip;
-COMENTARIO_BLOQUE   : '/*' .*? '*/' -> skip;
-WS                  : [ \t\r\n]+ -> skip;
+COMENTARIO_LINEA    : '//' ~[\r\n]*             -> channel(HIDDEN);
+COMENTARIO_BLOQUE   : '/*' .*? '*/'             -> channel(HIDDEN);
+WS                  : [ \t\r\n]+                -> channel(HIDDEN);
