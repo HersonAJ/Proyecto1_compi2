@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d;
 
-import com.example.contacto_3xtrat3r3str3.c3d.generadores.GeneradorC3DY;
+import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorY.GeneradorC3DY;
 import com.example.contacto_3xtrat3r3str3.y.Builder.ASTBuilder;
 import com.example.contacto_3xtrat3r3str3.y.analizador.PreprocesadorIndentacion;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoAST;
@@ -60,7 +60,7 @@ public class PruebaC3DY {
         semantica.analizar(programa);
 
         // 5. Generar cuartetas
-        GeneradorC3DY generador = new GeneradorC3DY(semantica.getTabla());
+        GeneradorC3DY generador = new GeneradorC3DY();
         List<Cuarteta> cuartetas = generador.generar(programa);
 
         // 6. Imprimir

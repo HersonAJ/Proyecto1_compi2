@@ -1,6 +1,7 @@
 package com.example.contacto_3xtrat3r3str3.c3d.generadores;
 
 import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorZ.GeneradorC3DZ;
 import com.example.contacto_3xtrat3r3str3.zetariano.Builder.ASTBuilderZ;
 import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoAST;
 import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoPrograma;
@@ -57,7 +58,7 @@ public class PruebaC3DZ {
         ValidadorSemanticoZ semantica = new ValidadorSemanticoZ();
         semantica.analizar(programa);
         //5.
-        GeneradorC3DZ generador = new GeneradorC3DZ(semantica.getTabla());
+        GeneradorC3DZ generador = new GeneradorC3DZ();
         List<Cuarteta> cuartetas = generador.generar(programa);
 
         //6 imprimir
