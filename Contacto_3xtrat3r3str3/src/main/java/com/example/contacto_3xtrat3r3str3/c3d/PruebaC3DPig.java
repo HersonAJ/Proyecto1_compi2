@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d;
 
-import com.example.contacto_3xtrat3r3str3.c3d.generadores.GeneradorC3DPig;
+import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorPig.GeneradorC3DPig;
 import com.example.contacto_3xtrat3r3str3.piglatin.builder.ASTBuilderPig;
 import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoAST;
 import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoPrograma;
@@ -57,7 +57,7 @@ public class PruebaC3DPig {
         ValidadorSemanticoPig semantica = new ValidadorSemanticoPig(carpetaRaiz);
         semantica.analizar(programa);
 
-        GeneradorC3DPig generador = new GeneradorC3DPig(semantica.getTabla());
+        GeneradorC3DPig generador = new GeneradorC3DPig();
         List<Cuarteta> cuartetas = generador.generar(programa);
 
         //6 imprimir

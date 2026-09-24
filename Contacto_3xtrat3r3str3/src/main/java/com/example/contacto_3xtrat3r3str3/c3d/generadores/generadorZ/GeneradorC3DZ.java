@@ -25,13 +25,12 @@ public class GeneradorC3DZ {
     private final GeneradorClaseZ genClase;
     private final GeneradorExpresionesZ genExpresiones;
     private final GeneradorSentenciasZ genSentencias;
-    private final GeneradorMetodosZ genMetodos;
+    private GeneradorMetodosZ genMetodos;
 
     public GeneradorC3DZ() {
         this.genClase = new GeneradorClaseZ(cuartetas);
         this.genExpresiones = new GeneradorExpresionesZ(cuartetas, temporales, etiquetas, offsets);
         this.genSentencias = new GeneradorSentenciasZ(cuartetas, temporales, etiquetas, offsets, genExpresiones);
-        this.genMetodos = new GeneradorMetodosZ(cuartetas, temporales, etiquetas, offsets, genSentencias);
     }
 
     public List<Cuarteta> generar(NodoPrograma programa) {
@@ -41,6 +40,9 @@ public class GeneradorC3DZ {
         offsets.reiniciar();
 
         NodoClase clase = programa.clase();
+
+        genMetodos = new GeneradorMetodosZ(
+                cuartetas, temporales, etiquetas, offsets, genSentencias, clase.atributos());
         genMetodos.setNombreClase(clase.nombre());
 
         // 1. Definición de la clase

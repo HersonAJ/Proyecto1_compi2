@@ -4,11 +4,9 @@ import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaEtiquetas;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaOffsets;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaTemporales;
-import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoConstructor;
-import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoMetodo;
-import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoParametroZ;
-import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoSentencia;
+import com.example.contacto_3xtrat3r3str3.zetariano.nodo.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,6 +22,7 @@ public class GeneradorMetodosZ {
     private final TablaEtiquetas etiquetas;
     private final TablaOffsets offsets;
     private final GeneradorSentenciasZ sentencias;
+    private List<NodoAtributoZ> atributosClase = new ArrayList<>();
 
     private String nombreClase;
 
@@ -31,12 +30,14 @@ public class GeneradorMetodosZ {
                              TablaTemporales temporales,
                              TablaEtiquetas etiquetas,
                              TablaOffsets offsets,
-                             GeneradorSentenciasZ sentencias) {
+                             GeneradorSentenciasZ sentencias,
+                             List<NodoAtributoZ> atributos) {
         this.cuartetas = cuartetas;
         this.temporales = temporales;
         this.etiquetas = etiquetas;
         this.offsets = offsets;
         this.sentencias = sentencias;
+        this.atributosClase = atributos;
     }
 
     public void setNombreClase(String nombre) {
@@ -57,6 +58,7 @@ public class GeneradorMetodosZ {
         for (NodoParametroZ p : c.parametros()) {
             offsets.registrar(p.nombre());
         }
+        registrarAtributos();
 
         // Cuerpo
         for (NodoSentencia s : c.cuerpo()) {
@@ -85,6 +87,7 @@ public class GeneradorMetodosZ {
         for (NodoParametroZ p : m.parametros()) {
             offsets.registrar(p.nombre());
         }
+        registrarAtributos();
 
         // Cuerpo
         for (NodoSentencia s : m.cuerpo()) {
@@ -103,5 +106,11 @@ public class GeneradorMetodosZ {
 
     private void emitir(String op, String a1, String a2, String res) {
         cuartetas.add(new Cuarteta(op, a1, a2, res));
+    }
+
+    private void registrarAtributos() {
+        for (NodoAtributoZ a : atributosClase) {
+            offsets.registrar(a.nombre());
+        }
     }
 }
