@@ -31,16 +31,19 @@ public class GeneradorC3DZ {
         this.genClase = new GeneradorClaseZ(cuartetas);
         this.genExpresiones = new GeneradorExpresionesZ(cuartetas, temporales, etiquetas, offsets);
         this.genSentencias = new GeneradorSentenciasZ(cuartetas, temporales, etiquetas, offsets, genExpresiones);
+        // genMetodos se crea en generar()
     }
 
     public List<Cuarteta> generar(NodoPrograma programa) {
         cuartetas.clear();
         temporales.reiniciar();
         etiquetas.reiniciar();
+        etiquetas.setPrefijo("Z_");
         offsets.reiniciar();
 
         NodoClase clase = programa.clase();
 
+        // Crear genMetodos con los atributos de la clase
         genMetodos = new GeneradorMetodosZ(
                 cuartetas, temporales, etiquetas, offsets, genSentencias, clase.atributos());
         genMetodos.setNombreClase(clase.nombre());

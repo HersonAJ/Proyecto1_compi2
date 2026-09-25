@@ -46,7 +46,7 @@ public class GeneradorMetodosZ {
 
     // CONSTRUCTORES
     public void generarConstructor(NodoConstructor c) {
-        String etiqueta = "L_" + nombreClase + "_constructor";
+        String etiqueta = "L_Z_" + nombreClase + "_constructor";
 
         // Encabezado
         emitir("constructor", etiqueta, String.valueOf(c.parametros().size()), c.nombre());
@@ -75,7 +75,7 @@ public class GeneradorMetodosZ {
 
     // METODOS
     public void generarMetodo(NodoMetodo m) {
-        String etiqueta = "L_" + nombreClase + "_" + m.nombre();
+        String etiqueta = "L_Z_" + nombreClase + "_" + m.nombre();
 
         // Encabezado
         emitir("method", etiqueta, String.valueOf(m.parametros().size()), m.nombre());

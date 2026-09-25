@@ -45,8 +45,8 @@ public class GeneradorFuncionesY {
         List<NodoParametro> parametros = funcion.parametros();
 
         // Etiquetas de la función
-        String L_funcion = "L_" + nombre;
-        String L_retorno = "L_" + nombre + "_retorno";
+        String L_funcion = "L_Y_" + nombre;
+        String L_retorno = "L_Y_" + nombre + "_retorno";
 
         // Encabezado
         emitir("func", L_funcion, String.valueOf(parametros.size()), nombre);

@@ -41,7 +41,7 @@ public class GeneradorMainPig {
     }
 
     public void generar(List<NodoSentencia> variablesGlobales, List<NodoSentencia> cuerpoMain) {
-        emitir("main", "-", "-", "-");
+        emitir("main", "L_Pig_main", "-", "-");
 
         // Ajustar BP al inicio del frame
         emitir("=", "SP", "-", "BP");

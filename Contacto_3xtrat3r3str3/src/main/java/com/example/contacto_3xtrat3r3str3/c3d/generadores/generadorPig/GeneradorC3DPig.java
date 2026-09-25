@@ -31,9 +31,9 @@ public class GeneradorC3DPig {
         cuartetas.clear();
         temporales.reiniciar();
         etiquetas.reiniciar();
+        etiquetas.setPrefijo("Pig_");   // ← AGREGAR
         offsets.reiniciar();
 
-        // Generar el cuerpo completo (variables globales + MAIOR)
         genMain.generar(programa.variablesGlobales(), programa.cuerpoMain());
 
         return cuartetas;

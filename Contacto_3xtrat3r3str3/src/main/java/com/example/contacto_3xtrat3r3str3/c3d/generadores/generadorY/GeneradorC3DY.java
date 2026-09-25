@@ -42,10 +42,10 @@ public class GeneradorC3DY {
 
     // PUNTO DE ENTRADA
     public List<Cuarteta> generar(NodoPrograma.Programa programa) {
-        // Reiniciar contadores
         cuartetas.clear();
         temporales.reiniciar();
         etiquetas.reiniciar();
+        etiquetas.setPrefijo("Y_");   // ← AGREGAR
         offsets.reiniciar();
 
         // 1. Estructuras
@@ -55,7 +55,6 @@ public class GeneradorC3DY {
 
         // 2. Funciones
         for (NodoFuncion f : programa.funciones()) {
-            // Cada función tiene su propio frame → reiniciar offsets
             offsets.reiniciar();
             genFunciones.generar((NodoFuncion.Funcion) f);
         }
