@@ -18,12 +18,14 @@ public record NodoClase(
     public EstructuraC aEstructuraC() {
         List<ParametroC> campos = new ArrayList<>();
         for (NodoAtributoZ a : atributos) {
-            String tipoC;
+            String tipoBaseC;
             if (TipoCZ.esPrimitivo(a.tipo())) {
-                tipoC = TipoCZ.baseValorAC(a.tipo());
+                tipoBaseC = TipoCZ.baseValorAC(a.tipo());
             } else {
-                tipoC = "struct " + a.tipo() + "*";
+                tipoBaseC = "struct " + a.tipo();
             }
+            // Arreglo estilo Java: un '*' por cada dimensión.
+            String tipoC = tipoBaseC + "*".repeat(a.dimensiones());
             campos.add(new ParametroC(tipoC, a.nombre()));
         }
         return new EstructuraC(nombre, campos);

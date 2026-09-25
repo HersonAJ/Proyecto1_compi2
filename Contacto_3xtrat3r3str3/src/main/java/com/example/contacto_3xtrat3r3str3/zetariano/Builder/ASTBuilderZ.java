@@ -46,7 +46,8 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     public NodoAST visitAtributo(ZParser.AtributoContext ctx) {
         String tipo = ctx.tipo().getText();
         String nombre = ctx.ID().getText();
-        return new NodoAtributoZ(linea(ctx), columna(ctx), tipo, nombre);
+        int dimensiones = ctx.COR_IZQ().size();
+        return new NodoAtributoZ(linea(ctx), columna(ctx), tipo, nombre, dimensiones);
     }
 
     @Override

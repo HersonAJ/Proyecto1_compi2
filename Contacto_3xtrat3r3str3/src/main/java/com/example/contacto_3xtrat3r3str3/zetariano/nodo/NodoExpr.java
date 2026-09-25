@@ -133,13 +133,15 @@ public sealed interface NodoExpr extends NodoAST permits
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             AccesoMemoria base = arreglo.aCodigoIntermedio(ctx);
             AccesoMemoria indiceAcc = indice.aCodigoIntermedio(ctx);
-            String tipoBase = obtenerTipoBase(ctx, arreglo);
-            String tipoElemento = tipoBase;
 
-            // Si el arreglo base tiene dimensiones > 1, un elemento es un puntero del tipo base.
-            int dimensionesBase = obtenerDimensiones(ctx, arreglo);
-            if (dimensionesBase > 1) {
-                tipoElemento = TipoCZ.baseAC(tipoBase, !TipoCZ.esPrimitivo(tipoBase));
+            // Tipo del elemento: si la base es 'int**', el elemento es 'int*'.
+            // Si es 'int*', el elemento es 'int'.
+            String tipoBase = base.getTipo();
+            String tipoElemento;
+            if (tipoBase.endsWith("*")) {
+                tipoElemento = tipoBase.substring(0, tipoBase.length() - 1);
+            } else {
+                tipoElemento = "int"; // fallback
             }
 
             return new AccesoArreglo(base, indiceAcc, tipoElemento);

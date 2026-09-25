@@ -95,32 +95,56 @@ public record NodoMetodo(int linea, int columna, String nombre,
         for (NodoSentencia s : sentencias) {
             switch (s) {
                 case NodoSentencia.DeclaracionVariable d -> {
-                    if (d.dimensiones() > 0) continue;
-                    if (yaDeclarados.contains(d.nombre())) continue;   // ← NUEVO
+                    if (yaDeclarados.contains(d.nombre())) continue;
                     yaDeclarados.add(d.nombre());
-                    tabla.declararVariable(d.nombre(), d.tipo(), 0);
-                    acumuladas.add(new VariableLocalC(
-                            TipoCZ.baseAC(d.tipo(), !TipoCZ.esPrimitivo(d.tipo())),
-                            d.nombre()));
+
+                    if (d.dimensiones() == 0) {
+                        // Variable simple u objeto.
+                        tabla.declararVariable(d.nombre(), d.tipo(), 0);
+                        acumuladas.add(new VariableLocalC(
+                                TipoCZ.baseAC(d.tipo(), !TipoCZ.esPrimitivo(d.tipo())),
+                                d.nombre()));
+                    } else {
+                        // Arreglo: en C es puntero. La reserva real viene del 'new'.
+                        tabla.declararVariable(d.nombre(), d.tipo(), d.dimensiones());
+                        String tipoBaseC = TipoCZ.esPrimitivo(d.tipo())
+                                ? TipoCZ.baseValorAC(d.tipo())
+                                : "struct " + d.tipo();
+                        String tipoC = tipoBaseC + "*".repeat(d.dimensiones());
+                        acumuladas.add(new VariableLocalC(tipoC, d.nombre()));
+                    }
                 }
                 case NodoSentencia.Condicional c -> {
                     declararLocales(tabla, c.cuerpoSi(), acumuladas, yaDeclarados);
-                    if (c.cuerpoSino() != null) declararLocales(tabla, c.cuerpoSino(), acumuladas, yaDeclarados);
+                    if (c.cuerpoSino() != null) {
+                        declararLocales(tabla, c.cuerpoSino(), acumuladas, yaDeclarados);
+                    }
                 }
                 case NodoSentencia.CicloPara c -> {
                     if (c.inicializacion() instanceof NodoSentencia.DeclaracionVariable d) {
-                        if (!yaDeclarados.contains(d.nombre())) {   // ← NUEVO
+                        if (!yaDeclarados.contains(d.nombre())) {
                             yaDeclarados.add(d.nombre());
-                            tabla.declararVariable(d.nombre(), d.tipo(), 0);
-                            acumuladas.add(new VariableLocalC(
-                                    TipoCZ.baseAC(d.tipo(), !TipoCZ.esPrimitivo(d.tipo())),
-                                    d.nombre()));
+                            if (d.dimensiones() == 0) {
+                                tabla.declararVariable(d.nombre(), d.tipo(), 0);
+                                acumuladas.add(new VariableLocalC(
+                                        TipoCZ.baseAC(d.tipo(), !TipoCZ.esPrimitivo(d.tipo())),
+                                        d.nombre()));
+                            } else {
+                                tabla.declararVariable(d.nombre(), d.tipo(), d.dimensiones());
+                                String tipoBaseC = TipoCZ.esPrimitivo(d.tipo())
+                                        ? TipoCZ.baseValorAC(d.tipo())
+                                        : "struct " + d.tipo();
+                                String tipoC = tipoBaseC + "*".repeat(d.dimensiones());
+                                acumuladas.add(new VariableLocalC(tipoC, d.nombre()));
+                            }
                         }
                     }
                     declararLocales(tabla, c.cuerpo(), acumuladas, yaDeclarados);
                 }
-                case NodoSentencia.CicloMientras c -> declararLocales(tabla, c.cuerpo(), acumuladas, yaDeclarados);
-                case NodoSentencia.CicloHacerMientras c -> declararLocales(tabla, c.cuerpo(), acumuladas, yaDeclarados);
+                case NodoSentencia.CicloMientras c ->
+                        declararLocales(tabla, c.cuerpo(), acumuladas, yaDeclarados);
+                case NodoSentencia.CicloHacerMientras c ->
+                        declararLocales(tabla, c.cuerpo(), acumuladas, yaDeclarados);
                 case NodoSentencia.Switch sw -> {
                     for (NodoSentencia.CasoSwitch caso : sw.casos()) {
                         declararLocales(tabla, caso.cuerpo(), acumuladas, yaDeclarados);

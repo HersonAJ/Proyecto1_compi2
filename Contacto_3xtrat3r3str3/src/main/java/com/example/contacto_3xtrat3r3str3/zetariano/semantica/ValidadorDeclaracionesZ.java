@@ -22,7 +22,7 @@ public class ValidadorDeclaracionesZ {
 
     public void declararAtributos(NodoClase clase) {
         for (NodoAtributoZ a: clase.atributos()) {
-            if (!tabla.declararAtributo(a.nombre(), a.tipo(), 0)) {
+            if (!tabla.declararAtributo(a.nombre(), a.tipo(), a.dimensiones())) {
                 errores.add(new ErrorSemantico(a.linea(), a.columna(), "Declaracion duplicada",
                         "El atributo '" + a.nombre() + "' ya fue declarado en la clase"));
             }

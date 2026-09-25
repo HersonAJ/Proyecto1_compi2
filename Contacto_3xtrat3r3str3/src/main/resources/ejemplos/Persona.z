@@ -1,109 +1,17 @@
-public class Cliente {
-    String nombre;
-    int edad;
+public class TestArreglos {
+    int[] numeros;
 
-    public Cliente(String nombreParametro, int edadParametro) {
-        nombre = nombreParametro;
-        edad = edadParametro;
+    public TestArreglos() {
+        numeros = new int[5];
     }
 
-    public Cliente() {
-        nombre = "Anonimo";
-        edad = 0;
-    }
-
-    public void presentarse() {
-        println("Hola, soy cliente");
-    }
-
-    public int obtenerEdad() {
-        return edad;
-    }
-
-    public void probarLlamadas() {
-        // new dentro de un método (crear objeto local)
-        Cliente otro = new Cliente("Pedro", 30);
-
-        // Llamada a método con receptor explícito
-        otro.presentarse();
-        int e = otro.obtenerEdad();
-        println("Edad obtenida");
-
-        // Llamada a método de la misma clase (this implícito)
-        presentarse();
-        int miEdad = obtenerEdad();
-        println("Mi edad");
-
-        // new sin argumentos (constructor por defecto)
-        Cliente tercero = new Cliente();
-        tercero.presentarse();
-    }
-
-    public void probarBreakContinue() {
-        // break en un for
-        for (int i = 0; i < 10; i++) {
-            if (i == 5) {
-                break;
-            }
-            println("Iteracion for");
-        }
-
-        // continue en un for
-        for (int i = 0; i < 5; i++) {
-            if (i == 2) {
-                continue;
-            }
-            println("Sin saltar");
-        }
-
-        // break en un while
-        int contador = 0;
-        while (contador < 100) {
-            contador++;
-            if (contador == 3) {
-                break;
-            }
-        }
-
-        // continue en un while
-        int j = 0;
-        while (j < 5) {
-            j++;
-            if (j == 2) {
-                continue;
-            }
-            println("While");
-        }
-
-        // break en do-while
-        int k = 0;
-        do {
-            k++;
-            if (k == 2) {
-                break;
-            }
-        } while (k < 10);
-
-        // switch con break
-        int opcion = 2;
-        switch (opcion) {
-            case 1:
-                println("Opcion 1");
-                break;
-            case 2:
-                println("Opcion 2");
-                break;
-            default:
-                println("Default");
-                break;
-        }
-    }
-
-    public void probarRecursividad(int n) {
-        if (n <= 0) {
-            return;
-        }
-        println("Recursivo");
-        probarRecursividad(n - 1);
+    public void probarArreglo() {
+        int[] locales = new int[3];
+        locales[0] = 10;
+        locales[1] = 20;
+        locales[2] = 30;
+        int suma = locales[0] + locales[1];
+        numeros[0] = suma;
+        println("Suma calculada");
     }
 }

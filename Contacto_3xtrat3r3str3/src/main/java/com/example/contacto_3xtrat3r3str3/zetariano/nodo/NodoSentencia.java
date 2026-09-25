@@ -37,24 +37,31 @@ public sealed interface NodoSentencia extends NodoAST permits
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccionZ ctx) {
-            // Arreglos: pendiente.
-            if (dimensiones > 0) {
+            if (inicializacion == null) return;
+
+            // ListaLiteral: pendiente.
+            if (inicializacion instanceof NodoExpr.ListaLiteral) {
                 throw new UnsupportedOperationException(
-                        "Declaración de arreglos aún no soportada (línea " + linea + ")");
+                        "Inicialización de arreglos con { ... } aún no soportada (línea " + linea + ")");
             }
 
-            // Variable simple u objeto con inicializador.
-            if (inicializacion != null) {
-                AccesoMemoria valorAcc = inicializacion.aCodigoIntermedio(ctx);
+            // Caso general: inicialización con expresión (ej. new int[5], new Persona(...)).
+            AccesoMemoria valorAcc = inicializacion.aCodigoIntermedio(ctx);
 
-                // El destino es un AccesoVariable con el tipo C correcto.
-                String tipoC = TipoCZ.esPrimitivo(tipo)
+            String tipoC;
+            if (dimensiones == 0) {
+                tipoC = TipoCZ.esPrimitivo(tipo)
                         ? TipoCZ.baseValorAC(tipo)
                         : "struct " + tipo + "*";
-                AccesoVariable destinoAcc = new AccesoVariable(nombre, tipoC);
-
-                ctx.getGestor().emitir(new AsignacionVariable(destinoAcc, valorAcc));
+            } else {
+                String tipoBaseC = TipoCZ.esPrimitivo(tipo)
+                        ? TipoCZ.baseValorAC(tipo)
+                        : "struct " + tipo;
+                tipoC = tipoBaseC + "*".repeat(dimensiones);
             }
+            AccesoVariable destinoAcc = new AccesoVariable(nombre, tipoC);
+
+            ctx.getGestor().emitir(new AsignacionVariable(destinoAcc, valorAcc));
         }
     }
 

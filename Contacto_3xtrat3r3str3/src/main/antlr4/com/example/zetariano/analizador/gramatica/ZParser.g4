@@ -15,7 +15,7 @@ miembroClase : atributo
              ;
 
 //atributos publicos, sin valor por defecto
-atributo : tipo ID PUNTO_COMA
+atributo : tipo (COR_IZQ COR_DER)* ID PUNTO_COMA
          ;
 
 //el constructor no lleva tipo de retorno

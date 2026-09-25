@@ -147,6 +147,11 @@ public class ValidadorSemantico {
 
             case ROMPER -> flujo.validarRomper((NodoSentencia.Romper) s);
             case CONTINUAR -> flujo.validarContinuar((NodoSentencia.Continuar) s);
+
+            case DECLARACION_ESTRUCTURA_LOCAL -> {
+                NodoSentencia.DeclaracionEstructuraLocal d = (NodoSentencia.DeclaracionEstructuraLocal) s;
+                declaraciones.declararEstructura(d.estructura());
+            }
         }
     }
 
