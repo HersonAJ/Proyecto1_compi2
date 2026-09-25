@@ -13,6 +13,7 @@ public class GestorCodigoIntermedio {
     private final List<Cuarteta> cuartetas;
     private final ContadorIds contador;
     private final Deque<ContextoCiclo> pilaCiclos;
+    private List<Cuarteta> listaTemporal = null;
 
     public GestorCodigoIntermedio() {
         this.cuartetas = new ArrayList<>();
@@ -20,21 +21,16 @@ public class GestorCodigoIntermedio {
         this.pilaCiclos = new ArrayDeque<>();
     }
 
-    // ===== Cuádruplas =====
-    public void emitir(Cuarteta c) {
-        cuartetas.add(c);
-    }
-
     public List<Cuarteta> getCuartetas() {
         return cuartetas;
     }
 
-    // ===== Contador =====
+    // Contador
     public ContadorIds getContador() {
         return contador;
     }
 
-    // ===== Pila de ciclos =====
+    // Pila de ciclos
     public void entrarCiclo(ContextoCiclo c) {
         pilaCiclos.push(c);
     }
@@ -47,5 +43,23 @@ public class GestorCodigoIntermedio {
 
     public ContextoCiclo cicloActual() {
         return pilaCiclos.peek();
+    }
+
+    public void empezarCaptura() {
+        listaTemporal = new ArrayList<>();
+    }
+
+    public List<Cuarteta> terminarCaptura() {
+        List<Cuarteta> resultado = listaTemporal;
+        listaTemporal = null;
+        return resultado;
+    }
+
+    public void emitir(Cuarteta c) {
+        if (listaTemporal != null) {
+            listaTemporal.add(c);
+        } else {
+            cuartetas.add(c);
+        }
     }
 }

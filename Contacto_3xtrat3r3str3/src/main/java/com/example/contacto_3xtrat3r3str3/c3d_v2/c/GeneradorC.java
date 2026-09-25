@@ -2,7 +2,6 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.c;
 
 import com.example.contacto_3xtrat3r3str3.c3d_v2.Cuarteta;
 
-
 import java.util.List;
 
 public class GeneradorC {
@@ -70,7 +69,12 @@ public class GeneradorC {
             String tipoTemp = tipos.get(i);
             if ("cadena".equals(tipoTemp)) {
                 sb.append("    char t").append(i).append("[256];\n");
+            } else if (esTipoC(tipoTemp)) {
+                // El tipo ya viene en formato C (struct X*, int, double, char, etc.)
+                sb.append("    ").append(tipoTemp)
+                        .append(" t").append(i).append(";\n");
             } else {
+                // Tipo del lenguaje fuente (entero, flotante, etc.) -> traducir.
                 sb.append("    ").append(TipoC.primitivoAC(tipoTemp))
                         .append(" t").append(i).append(";\n");
             }
@@ -94,5 +98,18 @@ public class GeneradorC {
         }
         sb.append("    return 0;\n");
         sb.append("}\n");
+    }
+
+    ///Detecta si un tipo ya está en formato C (no requiere traducción)
+    private boolean esTipoC(String tipo) {
+        if (tipo == null) return false;
+        return tipo.contains("struct ")
+                || tipo.contains("*")
+                || tipo.equals("int")
+                || tipo.equals("double")
+                || tipo.equals("float")
+                || tipo.equals("char")
+                || tipo.equals("void")
+                || tipo.equals("long");
     }
 }

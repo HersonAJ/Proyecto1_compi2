@@ -1,5 +1,10 @@
 package com.example.contacto_3xtrat3r3str3.zetariano.nodo;
 
+import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.*;
+import com.example.contacto_3xtrat3r3str3.zetariano.semantica.TablaSimbolosZ;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public sealed interface NodoExpr extends NodoAST permits
@@ -24,92 +29,521 @@ public sealed interface NodoExpr extends NodoAST permits
 
     TipoNodoExpr tipoNodo();
 
+    AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx);
+
     // LITERALES
     record LiteralEntero(int linea, int columna, int valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_ENTERO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralZ(valor, "int");
+        }
     }
 
     record LiteralDecimal(int linea, int columna, double valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_DECIMAL; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralZ(valor, "double");
+        }
     }
 
     record LiteralCadena(int linea, int columna, String valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CADENA; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralZ(valor, "String");
+        }
     }
 
     record LiteralCaracter(int linea, int columna, char valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CARACTER; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralZ(valor, "char");
+        }
     }
 
     record LiteralBool(int linea, int columna, boolean valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_BOOL; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralZ(valor, "boolean");
+        }
     }
 
     record LiteralNulo(int linea, int columna) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_NULO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            return new LiteralNuloZ();
+        }
     }
 
     //El inicializador '{10, 20, 30}' de un arreglo. Solo aparece como parte de una DeclaracionVariable, nunca suelto en medio de una expresion normal
     record ListaLiteral(int linea, int columna, List<NodoExpr> elementos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LISTA_LITERAL; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            throw new IllegalStateException(
+                    "ListaLiteral solo puede usarse como inicializador de una declaración "
+                            + "(línea " + linea + ")");
+        }
     }
 
     // ACCESOS
     record Identificador(int linea, int columna, String nombre) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.IDENTIFICADOR; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            // ¿Es un atributo de la clase?
+            var atributoOpt = ctx.getTabla().buscarAtributo(nombre);
+            if (atributoOpt.isPresent()) {
+                var attr = atributoOpt.get();
+                // this->nombre
+                AccesoVariable thisAcc = new AccesoVariable("this", "struct " + ctx.getNombreClase() + "*");
+                return new AccesoAtributo1(thisAcc, nombre, true, attr.tipo());
+            }
+
+            // Variable local o parámetro
+            var varOpt = ctx.getTabla().buscarVariable(nombre);
+            if (varOpt.isEmpty()) {
+                throw new IllegalStateException(
+                        "Variable no declarada: '" + nombre + "' (línea " + linea + ")");
+            }
+            var simbolo = varOpt.get();
+            String tipoC = TipoCZ.baseAC(simbolo.tipo(), !TipoCZ.esPrimitivo(simbolo.tipo()));
+            return new AccesoVariable(nombre, tipoC);
+        }
     }
 
     // 'numeros[0]', 'matriz[i][j]'
     record AccesoArray(int linea, int columna, NodoExpr arreglo, NodoExpr indice) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ARRAY; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            AccesoMemoria base = arreglo.aCodigoIntermedio(ctx);
+            AccesoMemoria indiceAcc = indice.aCodigoIntermedio(ctx);
+            String tipoBase = obtenerTipoBase(ctx, arreglo);
+            String tipoElemento = tipoBase;
+
+            // Si el arreglo base tiene dimensiones > 1, un elemento es un puntero del tipo base.
+            int dimensionesBase = obtenerDimensiones(ctx, arreglo);
+            if (dimensionesBase > 1) {
+                tipoElemento = TipoCZ.baseAC(tipoBase, !TipoCZ.esPrimitivo(tipoBase));
+            }
+
+            return new AccesoArreglo(base, indiceAcc, tipoElemento);
+        }
+
+        private String obtenerTipoBase(ContextoTraduccionZ ctx, NodoExpr baseExpr) {
+            if (baseExpr instanceof Identificador id) {
+                // Buscar como atributo primero
+                var attr = ctx.getTabla().buscarAtributo(id.nombre());
+                if (attr.isPresent()) return attr.get().tipo();
+                // Buscar como variable
+                var v = ctx.getTabla().buscarVariable(id.nombre());
+                if (v.isPresent()) return v.get().tipo();
+            }
+            return "int";
+        }
+
+        private int obtenerDimensiones(ContextoTraduccionZ ctx, NodoExpr baseExpr) {
+            if (baseExpr instanceof Identificador id) {
+                var attr = ctx.getTabla().buscarAtributo(id.nombre());
+                if (attr.isPresent()) return attr.get().dimensiones();
+                var v = ctx.getTabla().buscarVariable(id.nombre());
+                if (v.isPresent()) return v.get().dimensiones();
+            }
+            return 1;
+        }
     }
 
     // 'p1.edad'
     record AccesoAtributo(int linea, int columna, NodoExpr objeto, String atributo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ATRIBUTO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            AccesoMemoria base = objeto.aCodigoIntermedio(ctx);
+
+            String tipoCampo = obtenerTipoCampo(ctx, atributo);
+
+            // En .z, todos los accesos a atributos son a través de puntero.
+            return new AccesoAtributo1(base, atributo, true, tipoCampo);
+        }
+
+        private String obtenerTipoCampo(ContextoTraduccionZ ctx, String campo) {
+            // Buscar el atributo en la clase actual.
+            var attr = ctx.getTabla().buscarAtributo(campo);
+            if (attr.isPresent()) return attr.get().tipo();
+            return "int"; // fallback
+        }
     }
 
     // OPERACIONES
     // +, -, *, /, %, ==, !=, <, >, <=, >=, &&, ||
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.BINARIA; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            AccesoMemoria izq = izquierda.aCodigoIntermedio(ctx);
+            AccesoMemoria der = derecha.aCodigoIntermedio(ctx);
+
+            // Caso especial: == y != con String -> strcmp
+            boolean hayString = "String".equals(izq.getTipo()) || "String".equals(der.getTipo());
+            boolean esComparacion = "==".equals(operador) || "!=".equals(operador);
+            if (hayString && esComparacion) {
+                int idCmp = g.getContador().siguienteTemporal("int");
+                AccesoTemporal tCmp = new AccesoTemporal(idCmp, "int");
+                g.emitir(new OperacionBinaria(tCmp, izq, "strcmp", der));
+
+                int idRes = g.getContador().siguienteTemporal("int");
+                AccesoTemporal tRes = new AccesoTemporal(idRes, "int");
+                g.emitir(new OperacionBinaria(tRes, tCmp, operador, new LiteralZ(0, "int")));
+                return tRes;
+            }
+
+            // Promoción de tipos
+            PromocionTiposZ.Resultado prom = PromocionTiposZ.promover(izq.getTipo(), der.getTipo());
+
+            if (prom.conversionIzq() != null) {
+                int idConv = g.getContador().siguienteTemporal(prom.conversionIzq());
+                AccesoTemporal tConv = new AccesoTemporal(idConv, prom.conversionIzq());
+                g.emitir(new ConversionTipo(tConv, TipoCZ.baseValorAC(prom.conversionIzq()), izq));
+                izq = tConv;
+            }
+            if (prom.conversionDer() != null) {
+                int idConv = g.getContador().siguienteTemporal(prom.conversionDer());
+                AccesoTemporal tConv = new AccesoTemporal(idConv, prom.conversionDer());
+                g.emitir(new ConversionTipo(tConv, TipoCZ.baseValorAC(prom.conversionDer()), der));
+                der = tConv;
+            }
+
+            int idT = g.getContador().siguienteTemporal(prom.tipoResultado());
+            AccesoTemporal t = new AccesoTemporal(idT, prom.tipoResultado());
+            g.emitir(new OperacionBinaria(t, izq, operador, der));
+            return t;
+        }
     }
 
     // -x, !x (unario puro, no modifica la variable)
     record Unaria(int linea, int columna, String operador, NodoExpr operando) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.UNARIA; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            AccesoMemoria op = operando.aCodigoIntermedio(ctx);
+
+            int idT = g.getContador().siguienteTemporal(op.getTipo());
+            AccesoTemporal t = new AccesoTemporal(idT, op.getTipo());
+            g.emitir(new OperacionUnaria(t, operador, op));
+            return t;
+        }
     }
 
     //++x, --x, x++, x--
     record IncrementoDecremento(int linea, int columna, String operador,
                                 NodoExpr operando, boolean prefijo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INCREMENTO_DECREMENTO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            AccesoMemoria op = operando.aCodigoIntermedio(ctx);
+
+            String opBinario = "++".equals(operador) ? "+" : "-";
+            AccesoMemoria uno = new LiteralZ(1, "int");
+
+            g.emitir(new OperacionBinaria(op, op, opBinario, uno));
+
+            return op;
+        }
     }
 
     // condicion ? siVerdadero : siFalso
     record Ternaria(int linea, int columna, NodoExpr condicion,
                     NodoExpr siVerdadero, NodoExpr siFalso) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.TERNARIA; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+            var c = g.getContador();
+
+            // 1. Crear el temporal con tipo provisional.
+            int idT = c.siguienteTemporal("int");
+            AccesoTemporal t = new AccesoTemporal(idT, "int");
+
+            // 2. Evaluar condición.
+            AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
+
+            // 3. Etiquetas.
+            int lSi = c.siguienteEtiqueta();
+            int lNo = c.siguienteEtiqueta();
+            int lFin = c.siguienteEtiqueta();
+
+            g.emitir(new Condicional1(condAcc, "!=", new LiteralZ(0, "int"), lSi));
+            g.emitir(new Salto(lNo));
+
+            // 4. Bloque "si"
+            g.emitir(new DefinicionEtiqueta(lSi));
+            AccesoMemoria valorSi = siVerdadero.aCodigoIntermedio(ctx);
+            g.emitir(new AsignacionVariable(t, valorSi));
+            g.emitir(new Salto(lFin));
+
+            // 5. Bloque "no"
+            g.emitir(new DefinicionEtiqueta(lNo));
+            AccesoMemoria valorNo = siFalso.aCodigoIntermedio(ctx);
+            g.emitir(new AsignacionVariable(t, valorNo));
+
+            // 6. Fin
+            g.emitir(new DefinicionEtiqueta(lFin));
+
+            // 7. Corregir el tipo del temporal según los tipos reales.
+            String tipoComun = PromocionTiposZ.promover(valorSi.getTipo(), valorNo.getTipo())
+                    .tipoResultado();
+            c.registrarTipoTemporal(idT, tipoComun);
+
+            return new AccesoTemporal(idT, tipoComun);
+        }
     }
 
     // LLAMADAS Y CREACION DE OBJETOS
     // Llamada sin objeto explicito: 'calcular(x)'
     record LlamadaFuncion(int linea, int columna, String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_FUNCION; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            // 1. Evaluar argumentos.
+            List<AccesoMemoria> args = new ArrayList<>();
+            for (NodoExpr arg : argumentos) {
+                args.add(arg.aCodigoIntermedio(ctx));
+            }
+
+            // 2. Resolver la firma del método (por cantidad y tipos).
+            List<String> tiposArgs = new ArrayList<>();
+            for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
+
+            var firmaOpt = ctx.getTabla().buscarMetodo(nombre, tiposArgs);
+            if (firmaOpt.isEmpty()) {
+                throw new IllegalStateException(
+                        "Método no encontrado: '" + nombre + "' con argumentos " + tiposArgs
+                                + " (línea " + linea + ")");
+            }
+            var firma = firmaOpt.get();
+
+            // 3. Construir nombre único en C.
+            String nombreC = construirNombreC(ctx.getNombreClase(), nombre, firma);
+
+            // 4. Determinar si el método retorna algo.
+            String tipoRetorno = firma.tipoRetorno(); // null si void
+
+            // 5. Emitir la llamada.
+            if (tipoRetorno == null) {
+                // Método void: no creamos temporal.
+                AccesoVariable thisAcc = new AccesoVariable("this",
+                        "struct " + ctx.getNombreClase() + "*");
+                g.emitir(new Llamada(null, nombreC, juntarThisConArgs(thisAcc, args)));
+                return null;
+            } else {
+                // Método con retorno: creamos temporal.
+                int idT = g.getContador().siguienteTemporal(tipoRetorno);
+                AccesoTemporal t = new AccesoTemporal(idT, tipoRetorno);
+
+                AccesoVariable thisAcc = new AccesoVariable("this",
+                        "struct " + ctx.getNombreClase() + "*");
+                g.emitir(new Llamada(t, nombreC, juntarThisConArgs(thisAcc, args)));
+                return t;
+            }
+        }
+
+        private List<AccesoMemoria> juntarThisConArgs(AccesoMemoria thisAcc, List<AccesoMemoria> args) {
+            List<AccesoMemoria> todos = new ArrayList<>();
+            todos.add(thisAcc);
+            todos.addAll(args);
+            return todos;
+        }
+
+        private String construirNombreC(String clase, String metodo, TablaSimbolosZ.Firma firma) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(clase).append('_').append(metodo);
+            for (TablaSimbolosZ.Parametro p : firma.parametros()) {
+                sb.append('_').append(p.tipo());
+            }
+            return sb.toString();
+        }
     }
 
     //'p1.saludar()', 'p1.calcularAnioNacimiento(2026)'
     record LlamadaMetodo(int linea, int columna, NodoExpr objeto,
                          String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_METODO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            // 1. Evaluar receptor y argumentos.
+            AccesoMemoria receptorAcc = objeto.aCodigoIntermedio(ctx);
+            List<AccesoMemoria> args = new ArrayList<>();
+            for (NodoExpr arg : argumentos) {
+                args.add(arg.aCodigoIntermedio(ctx));
+            }
+
+            // 2. Nombre de la clase del receptor.
+            String claseReceptor = obtenerNombreClase(receptorAcc);
+
+            // 3. Resolver firma del método.
+            List<String> tiposArgs = new ArrayList<>();
+            for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
+
+            var firmaOpt = ctx.getTabla().buscarMetodo(nombre, tiposArgs);
+            if (firmaOpt.isEmpty()) {
+                throw new IllegalStateException(
+                        "Método no encontrado: '" + nombre + "' en clase '" + claseReceptor
+                                + "' con argumentos " + tiposArgs + " (línea " + linea + ")");
+            }
+            var firma = firmaOpt.get();
+
+            // 4. Nombre C.
+            String nombreC = construirNombreC(claseReceptor, nombre, firma);
+
+            // 5. Emitir.
+            String tipoRetorno = firma.tipoRetorno();
+            if (tipoRetorno == null) {
+                g.emitir(new LlamadaMetodo1(null, receptorAcc, nombreC, args));
+                return null;
+            } else {
+                int idT = g.getContador().siguienteTemporal(tipoRetorno);
+                AccesoTemporal t = new AccesoTemporal(idT, tipoRetorno);
+                g.emitir(new LlamadaMetodo1(t, receptorAcc, nombreC, args));
+                return t;
+            }
+        }
+
+        private String obtenerNombreClase(AccesoMemoria acceso) {
+            String tipo = acceso.getTipo();
+            // Si es "struct Nombre*", extraer "Nombre"
+            if (tipo.startsWith("struct ") && tipo.endsWith("*")) {
+                return tipo.substring("struct ".length(), tipo.length() - 1).trim();
+            }
+            // Si es "struct Nombre", extraer "Nombre"
+            if (tipo.startsWith("struct ")) {
+                return tipo.substring("struct ".length()).trim();
+            }
+            return tipo;
+        }
+
+        private String construirNombreC(String clase, String metodo, TablaSimbolosZ.Firma firma) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(clase).append('_').append(metodo);
+            for (TablaSimbolosZ.Parametro p : firma.parametros()) {
+                sb.append('_').append(p.tipo());
+            }
+            return sb.toString();
+        }
     }
 
     //'new Persona("Carlos", 25)'
     record InstanciaObjeto(int linea, int columna, String tipoClase, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INSTANCIA_OBJETO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            // 1. Evaluar argumentos.
+            List<AccesoMemoria> args = new ArrayList<>();
+            for (NodoExpr arg : argumentos) {
+                args.add(arg.aCodigoIntermedio(ctx));
+            }
+
+            // 2. Resolver firma del constructor.
+            List<String> tiposArgs = new ArrayList<>();
+            for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
+
+            var firmaOpt = ctx.getTabla().buscarConstructor(tipoClase, tiposArgs);
+            if (firmaOpt.isEmpty()) {
+                throw new IllegalStateException(
+                        "Constructor no encontrado: '" + tipoClase + "' con argumentos "
+                                + tiposArgs + " (línea " + linea + ")");
+            }
+            var firma = firmaOpt.get();
+
+            // 3. Nombre C del constructor: Clase_constructor_tipos
+            String nombreConstructorC = construirNombreConstructorC(tipoClase, firma);
+
+            // 4. Temporal del tipo Clase*.
+            String tipoC = "struct " + tipoClase + "*";
+            int idT = g.getContador().siguienteTemporal(tipoC);
+            AccesoTemporal t = new AccesoTemporal(idT, tipoC);
+
+            // 5. Emitir.
+            g.emitir(new NewObjeto(t, tipoClase, nombreConstructorC, args));
+            return t;
+        }
+
+        private String construirNombreConstructorC(String clase, TablaSimbolosZ.Firma firma) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(clase).append("_constructor");
+            for (TablaSimbolosZ.Parametro p : firma.parametros()) {
+                sb.append('_').append(p.tipo());
+            }
+            return sb.toString();
+        }
     }
 
     record ArregloNuevo(int linea, int columna, String tipoBase, List<NodoExpr> dimensiones) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ARREGLO_NUEVO; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            if (dimensiones.size() != 1 || dimensiones.get(0) == null) {
+                throw new UnsupportedOperationException(
+                        "Solo se soportan arreglos 1D con tamaño explícito por ahora "
+                                + "(línea " + linea + ")");
+            }
+
+            // 1. Evaluar el tamaño.
+            AccesoMemoria tamano = dimensiones.get(0).aCodigoIntermedio(ctx);
+
+            // 2. Tipo del elemento en C.
+            String tipoElementoC;
+            if (TipoCZ.esPrimitivo(tipoBase)) {
+                tipoElementoC = TipoCZ.baseValorAC(tipoBase);
+            } else {
+                tipoElementoC = "struct " + tipoBase;
+            }
+
+            // 3. Temporal del tipo "TipoC*".
+            String tipoTemporal = tipoElementoC + "*";
+            int idT = g.getContador().siguienteTemporal(tipoTemporal);
+            AccesoTemporal t = new AccesoTemporal(idT, tipoTemporal);
+
+            // 4. Emitir.
+            g.emitir(new NewArreglo(t, tipoElementoC, tamano));
+            return t;
+        }
     }
 }

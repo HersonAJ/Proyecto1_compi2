@@ -138,28 +138,11 @@ public sealed interface NodoSentencia extends NodoAST permits
         @Override
         public void aCodigoIntermedio(ContextoTraduccion ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
+
+            AccesoMemoria destinoAcc = destino.aCodigoIntermedio(ctx);
             AccesoMemoria valorAcc = valor.aCodigoIntermedio(ctx);
 
-            switch (destino) {
-                case NodoExpr.Identificador id -> {
-                    String tipo = ctx.getTabla().buscarVariable(id.nombre())
-                            .map(TipoC::aTipoC)
-                            .orElse("int");
-                    AccesoVariable destinoAcc = new AccesoVariable(id.nombre(), tipo);
-                    g.emitir(new AsignacionVariable(destinoAcc, valorAcc));
-                }
-                case NodoExpr.AccesoArray acc -> {
-                    AccesoMemoria base = acc.arreglo().aCodigoIntermedio(ctx);
-                    AccesoMemoria indice = acc.indice().aCodigoIntermedio(ctx);
-                    g.emitir(new AsignacionArreglo(base, indice, valorAcc));
-                }
-                case NodoExpr.AccesoAtributo acc -> {
-                    AccesoMemoria base = acc.objeto().aCodigoIntermedio(ctx);
-                    g.emitir(new AsignacionAtributo(base, acc.atributo(), false, valorAcc));
-                }
-                default -> throw new IllegalStateException(
-                        "Destino de asignación no soportado (línea " + linea + ")");
-            }
+            g.emitir(new AsignacionVariable(destinoAcc, valorAcc));
         }
     }
 
