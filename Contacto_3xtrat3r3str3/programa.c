@@ -4,6 +4,7 @@
 
 int esMayorEdad(int edad);
 int sumar(int a, int b);
+int testArreglo(void);
 
 int esMayorEdad(int edad) {
     int resultado;
@@ -29,6 +30,20 @@ int sumar(int a, int b) {
     int t0;
 
     t0 = a + b;
+    resultado = t0;
+    return resultado;
+}
+
+int testArreglo(void) {
+    int numeros[3];
+    int resultado;
+
+    int t0;
+
+    numeros[0] = 10;
+    numeros[1] = 20;
+    numeros[2] = 30;
+    t0 = numeros[0] + numeros[1];
     resultado = t0;
     return resultado;
 }

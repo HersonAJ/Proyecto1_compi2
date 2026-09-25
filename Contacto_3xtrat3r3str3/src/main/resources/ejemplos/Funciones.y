@@ -23,3 +23,8 @@ definir esMayorEdad(entero edad) -> bool:
 definir sumar(entero a, entero b) -> entero:
 	entero resultado = a + b
 	retornar resultado
+
+definir testArreglo() -> entero:
+	entero numeros[3] = {10, 20, 30}
+	entero resultado = numeros[0] + numeros[1]
+	retornar resultado

@@ -56,10 +56,7 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
                     cuartetas, tiposTemporales);
         }
 
-        // ============================================================
         // Declaración en la tabla de símbolos + recolección para C
-        // ============================================================
-
         private void declararParametrosEnScope(TablaSimbolos tabla) {
             for (NodoParametro p : parametros) {
                 if (p instanceof NodoParametro.Parametro par) {
@@ -90,16 +87,15 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
                         tabla.declararVariable(d.nombre(), d.tipo(),
                                 true, 1, false, null, List.of(d.tamano()));
                         acumuladas.add(new VariableLocalC(
-                                TipoC.primitivoAC(d.tipo()) + "[" + d.tamano() + "]",
-                                d.nombre()));
+                                TipoC.primitivoAC(d.tipo()),
+                                d.nombre() + "[" + d.tamano() + "]"));
                     }
                     case NodoSentencia.DeclaracionMatriz d -> {
                         tabla.declararVariable(d.nombre(), d.tipo(),
                                 true, 2, false, null, List.of(d.filas(), d.columnas()));
                         acumuladas.add(new VariableLocalC(
-                                TipoC.primitivoAC(d.tipo())
-                                        + "[" + d.filas() + "][" + d.columnas() + "]",
-                                d.nombre()));
+                                TipoC.primitivoAC(d.tipo()),
+                                d.nombre() + "[" + d.filas() + "][" + d.columnas() + "]"));
                     }
                     case NodoSentencia.DeclaracionEstructura d -> {
                         tabla.declararVariable(d.nombre(), d.tipoEstructura(),
@@ -189,10 +185,7 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
             }
         }
 
-        // ============================================================
         // Conversión de parámetros a C
-        // ============================================================
-
         private static ParametroC aParametroC(NodoParametro.Parametro p) {
             if (p.esEstructura()) {
                 return new ParametroC(p.tipoEstructura() + "*", p.nombre());
