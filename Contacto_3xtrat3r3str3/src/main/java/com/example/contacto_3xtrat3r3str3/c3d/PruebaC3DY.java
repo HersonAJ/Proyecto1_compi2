@@ -1,5 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d;
 
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.EstructuraC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorArchivoC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorC;
@@ -66,7 +67,8 @@ public class PruebaC3DY {
         List<FuncionC> funcionesC = programa.aFuncionesC(semantica.getTabla());
 
         // 7. Generar C
-        String codigoC = new GeneradorC().generar(funcionesC, false);
+        List<EstructuraC> estructurasC = programa.aEstructurasC();
+        String codigoC = new GeneradorC().generar(funcionesC, estructurasC, false);
 
         // 8. Imprimir C
         System.out.println("=== CÓDIGO C GENERADO ===");

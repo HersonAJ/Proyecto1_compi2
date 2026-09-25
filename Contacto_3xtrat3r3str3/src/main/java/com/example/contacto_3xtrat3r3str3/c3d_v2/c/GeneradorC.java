@@ -13,11 +13,11 @@ public class GeneradorC {
         this.sb = new StringBuilder();
     }
 
-    public String generar(List<FuncionC> funciones, boolean incluirMain) {
+    public String generar(List<FuncionC> funciones, List<EstructuraC> estructuras, boolean incluirMain) {
         sb.setLength(0);
 
         escribirCabeceraArchivo();
-        escribirEstructuras();
+        escribirEstructuras(estructuras);
         escribirPrototipos(funciones);
 
         for (FuncionC f : funciones) {
@@ -37,8 +37,10 @@ public class GeneradorC {
         sb.append("#include <string.h>\n\n");
     }
 
-    private void escribirEstructuras() {
-        // TODO: se conectará con las estructuras del AST.
+    private void escribirEstructuras(List<EstructuraC> estructuras) {
+        for (EstructuraC e : estructuras) {
+            e.aCodigoC(sb);
+        }
     }
 
     private void escribirPrototipos(List<FuncionC> funciones) {
@@ -65,8 +67,13 @@ public class GeneradorC {
         // 2. Declaración de temporales.
         List<String> tipos = f.getTiposTemporales();
         for (int i = 0; i < tipos.size(); i++) {
-            sb.append("    ").append(TipoC.primitivoAC(tipos.get(i)))
-                    .append(" t").append(i).append(";\n");
+            String tipoTemp = tipos.get(i);
+            if ("cadena".equals(tipoTemp)) {
+                sb.append("    char t").append(i).append("[256];\n");
+            } else {
+                sb.append("    ").append(TipoC.primitivoAC(tipoTemp))
+                        .append(" t").append(i).append(";\n");
+            }
         }
         if (!tipos.isEmpty()) {
             sb.append('\n');

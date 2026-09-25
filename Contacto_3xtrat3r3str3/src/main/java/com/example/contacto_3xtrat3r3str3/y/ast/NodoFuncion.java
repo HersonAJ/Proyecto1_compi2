@@ -100,7 +100,7 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
                     case NodoSentencia.DeclaracionEstructura d -> {
                         tabla.declararVariable(d.nombre(), d.tipoEstructura(),
                                 false, 0, true, d.tipoEstructura(), List.of());
-                        acumuladas.add(new VariableLocalC(d.tipoEstructura(), d.nombre()));
+                        acumuladas.add(new VariableLocalC("struct " + d.tipoEstructura(), d.nombre()));
                     }
                     case NodoSentencia.Condicional c -> {
                         recogerYDeclararVariablesLocales(tabla, c.cuerpoSi(), acumuladas);

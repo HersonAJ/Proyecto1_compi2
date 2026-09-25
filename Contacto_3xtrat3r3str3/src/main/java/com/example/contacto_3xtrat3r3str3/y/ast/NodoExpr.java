@@ -11,8 +11,6 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.ConversionTipo;
 
 import java.util.List;
 
-import java.util.List;
-
 public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.LiteralEntero,
         NodoExpr.LiteralFlotante,
@@ -183,8 +181,34 @@ public sealed interface NodoExpr extends NodoAST permits
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx) {
-            // TODO: implementar en el paso correspondiente
-            throw new UnsupportedOperationException("AccesoAtributo pendiente");
+            AccesoMemoria base = objeto.aCodigoIntermedio(ctx);
+
+            // Tipo del campo: lo buscamos en la estructura.
+            String tipoCampo = obtenerTipoCampo(ctx, objeto, atributo);
+
+            return new AccesoAtributo1(base, atributo, false, tipoCampo);
+        }
+
+        private String obtenerTipoCampo(ContextoTraduccion ctx, NodoExpr baseExpr, String campo) {
+            // Si la base es un identificador, sabemos el nombre de la estructura.
+            if (baseExpr instanceof Identificador id) {
+                var varOpt = ctx.getTabla().buscarVariable(id.nombre());
+                if (varOpt.isEmpty()) return "entero";
+
+                var simbolo = varOpt.get();
+                if (!simbolo.esEstructura()) return "entero";
+
+                String nombreEstructura = simbolo.tipoEstructura();
+                var estOpt = ctx.getTabla().buscarEstructura(nombreEstructura);
+                if (estOpt.isEmpty()) return "entero";
+
+                String tipoY = estOpt.get().atributos().get(campo);
+                if (tipoY == null) return "entero";
+
+                return tipoY;   // tipo del lenguaje Y ("entero", "flotante", ...)
+            }
+
+            return "entero"; // fallback
         }
     }
 
@@ -328,11 +352,16 @@ public sealed interface NodoExpr extends NodoAST permits
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx) {
-            // TODO: implementar en el paso correspondiente — necesita una
-            // instrucción C3D de lectura hacia un temporal (equivalente de
-            // lectura a lo que Imprimir1 es de escritura). Sigue el mismo
-            // patrón que AccesoArray/AccesoAtributo por ahora.
-            throw new UnsupportedOperationException("Leer (expresion) pendiente");
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            // Creamos un temporal de tipo cadena para recibir el valor leído.
+            int idT = g.getContador().siguienteTemporal("cadena");
+            AccesoTemporal t = new AccesoTemporal(idT, "cadena");
+
+            // Emitimos la cuádrupla Leer apuntando al temporal.
+            g.emitir(new com.example.contacto_3xtrat3r3str3.c3d_v2.Leer(t, "cadena"));
+
+            return t;
         }
     }
 }

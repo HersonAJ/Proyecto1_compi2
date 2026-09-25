@@ -5,14 +5,14 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2;
  *   base.campo     ->  base.campo
  *   base->campo    ->  base->campo   (cuando la base es un puntero)
  */
-public class AccesoAtributo extends AccesoMemoria {
+public class AccesoAtributo1 extends AccesoMemoria {
 
     private final AccesoMemoria base;
     private final String campo;
     private final boolean porPuntero;
     private final String tipoCampo; // tipo del campo
 
-    public AccesoAtributo(AccesoMemoria base, String campo, boolean porPuntero, String tipoCampo) {
+    public AccesoAtributo1(AccesoMemoria base, String campo, boolean porPuntero, String tipoCampo) {
         this.base = base;
         this.campo = campo;
         this.porPuntero = porPuntero;

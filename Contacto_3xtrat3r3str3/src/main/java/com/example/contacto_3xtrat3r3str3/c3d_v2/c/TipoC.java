@@ -30,7 +30,7 @@ public final class TipoC {
             return primitivoAC(s.tipo()) + "*";
         }
         if (s.esEstructura()) {
-            return s.tipoEstructura();
+            return structAC(s.tipoEstructura());
         }
         return primitivoAC(s.tipo());
     }
