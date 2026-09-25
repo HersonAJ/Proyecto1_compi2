@@ -30,9 +30,19 @@ public class OperacionBinaria extends Cuarteta {
         sb.append("    ");
         destino.aCodigoC(sb);
         sb.append(" = ");
-        izquierda.aCodigoC(sb);
-        sb.append(' ').append(operador).append(' ');
-        derecha.aCodigoC(sb);
+
+        if ("strcmp".equals(operador)) {
+            sb.append("strcmp(");
+            izquierda.aCodigoC(sb);
+            sb.append(", ");
+            derecha.aCodigoC(sb);
+            sb.append(")");
+        } else {
+            izquierda.aCodigoC(sb);
+            sb.append(' ').append(operador).append(' ');
+            derecha.aCodigoC(sb);
+        }
+
         sb.append(";\n");
     }
 }

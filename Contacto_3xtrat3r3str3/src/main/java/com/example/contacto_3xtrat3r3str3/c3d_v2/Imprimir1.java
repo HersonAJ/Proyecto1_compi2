@@ -10,12 +10,12 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2;
  *   bool     -> %d
  * Además agrega '\n' al final.
  */
-public class Imprimir extends Cuarteta {
+public class Imprimir1 extends Cuarteta {
 
     private final AccesoMemoria valor;
     private final String tipo;
 
-    public Imprimir(AccesoMemoria valor, String tipo) {
+    public Imprimir1(AccesoMemoria valor, String tipo) {
         this.valor = valor;
         this.tipo = tipo;
     }

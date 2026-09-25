@@ -10,24 +10,21 @@ public class AccesoAtributo extends AccesoMemoria {
     private final AccesoMemoria base;
     private final String campo;
     private final boolean porPuntero;
+    private final String tipoCampo; // tipo del campo
 
-    public AccesoAtributo(AccesoMemoria base, String campo, boolean porPuntero) {
+    public AccesoAtributo(AccesoMemoria base, String campo, boolean porPuntero, String tipoCampo) {
         this.base = base;
         this.campo = campo;
         this.porPuntero = porPuntero;
+        this.tipoCampo = tipoCampo;
     }
 
-    public AccesoMemoria getBase() {
-        return base;
-    }
+    public AccesoMemoria getBase() { return base; }
+    public String getCampo()       { return campo; }
+    public boolean isPorPuntero()  { return porPuntero; }
 
-    public String getCampo() {
-        return campo;
-    }
-
-    public boolean isPorPuntero() {
-        return porPuntero;
-    }
+    @Override
+    public String getTipo() { return tipoCampo; }
 
     @Override
     public void aCodigoC(StringBuilder sb) {

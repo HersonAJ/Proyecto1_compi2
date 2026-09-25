@@ -3,11 +3,11 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2;
 /**
  * goto L_continuar;
  */
-public class Continuar extends Cuarteta {
+public class Continuar1 extends Cuarteta {
 
     private final int etiqueta;
 
-    public Continuar(int etiqueta) {
+    public Continuar1(int etiqueta) {
         this.etiqueta = etiqueta;
     }
 

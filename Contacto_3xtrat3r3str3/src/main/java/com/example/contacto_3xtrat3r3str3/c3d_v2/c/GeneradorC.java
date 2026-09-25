@@ -53,15 +53,26 @@ public class GeneradorC {
         f.escribirCabecera(sb);
         sb.append(" {\n");
 
-        // Declaración de temporales con su tipo real
+        // 1. Declaración de variables locales.
+        for (VariableLocalC v : f.getVariablesLocales()) {
+            sb.append("    ");
+            v.aCodigoC(sb);
+        }
+        if (!f.getVariablesLocales().isEmpty()) {
+            sb.append('\n');
+        }
+
+        // 2. Declaración de temporales.
         List<String> tipos = f.getTiposTemporales();
         for (int i = 0; i < tipos.size(); i++) {
-            sb.append("    ").append(tipos.get(i)).append(" t").append(i).append(";\n");
+            sb.append("    ").append(TipoC.primitivoAC(tipos.get(i)))
+                    .append(" t").append(i).append(";\n");
         }
         if (!tipos.isEmpty()) {
             sb.append('\n');
         }
 
+        // 3. Cuádruplas.
         for (Cuarteta c : f.getCuartetas()) {
             c.aCodigoC(sb);
         }

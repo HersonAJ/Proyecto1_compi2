@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.generadorC;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorPig.GeneradorC3DPig;
 import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorY.GeneradorC3DY;
 import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorZ.GeneradorC3DZ;
@@ -40,19 +40,19 @@ public class PruebaGeneradorC {
         try {
             // 1. Compilar Funciones.y con Y?
             System.out.println("=== Compilando Funciones.y ===");
-            List<Cuarteta> cuartetasY = compilarY(
+            List<CuartetaV1> cuartetasY = compilarY(
                     carpetaRaiz.resolve("ejemplos/Funciones.y"));
             System.out.println("Cuartetas de Y?: " + cuartetasY.size());
 
             // 2. Compilar Persona.z con Z
             System.out.println("\n=== Compilando Persona.z ===");
-            List<Cuarteta> cuartetasZ = compilarZ(
+            List<CuartetaV1> cuartetasZ = compilarZ(
                     carpetaRaiz.resolve("ejemplos/EjemploZ.z"));
             System.out.println("Cuartetas de Z: " + cuartetasZ.size());
 
             // 3. Compilar programa.pig con PigLatin
             System.out.println("\n=== Compilando programa.pig ===");
-            List<Cuarteta> cuartetasPig = compilarPig(
+            List<CuartetaV1> cuartetasPig = compilarPig(
                     carpetaRaiz.resolve("ejemplos/EjemploPig.pig"),
                     carpetaRaiz);
             System.out.println("Cuartetas de PigLatin: " + cuartetasPig.size());
@@ -84,7 +84,7 @@ public class PruebaGeneradorC {
     // COMPILAR Y?
     // ============================================================
 
-    private static List<Cuarteta> compilarY(Path ruta) throws IOException {
+    private static List<CuartetaV1> compilarY(Path ruta) throws IOException {
         String codigo = Files.readString(ruta);
 
         // Preprocesador
@@ -117,7 +117,7 @@ public class PruebaGeneradorC {
     // COMPILAR Z
     // ============================================================
 
-    private static List<Cuarteta> compilarZ(Path ruta) throws IOException {
+    private static List<CuartetaV1> compilarZ(Path ruta) throws IOException {
         String codigo = Files.readString(ruta);
 
         // Lexer
@@ -150,7 +150,7 @@ public class PruebaGeneradorC {
     // COMPILAR PIGLATIN
     // ============================================================
 
-    private static List<Cuarteta> compilarPig(Path ruta, Path carpetaRaiz) throws IOException {
+    private static List<CuartetaV1> compilarPig(Path ruta, Path carpetaRaiz) throws IOException {
         String codigo = Files.readString(ruta);
 
         // Lexer

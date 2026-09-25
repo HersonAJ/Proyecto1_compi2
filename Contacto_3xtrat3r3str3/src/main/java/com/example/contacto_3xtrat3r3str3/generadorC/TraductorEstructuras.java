@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.generadorC;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -16,7 +16,7 @@ public class TraductorEstructuras {
         this.escritor = escritor;
     }
 
-    public boolean procesar(Cuarteta c) {
+    public boolean procesar(CuartetaV1 c) {
         String op = c.operador();
 
         // Si estamos saltando un struct, ignoramos todo hasta end-struct

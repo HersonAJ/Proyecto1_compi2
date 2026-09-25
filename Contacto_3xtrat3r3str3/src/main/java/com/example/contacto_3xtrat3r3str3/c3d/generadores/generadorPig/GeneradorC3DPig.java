@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorPig;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaEtiquetas;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaOffsets;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaTemporales;
@@ -12,7 +12,7 @@ import java.util.List;
 //Orquesta la generación de cuartetas para PigLatin
 public class GeneradorC3DPig {
 
-    private final List<Cuarteta> cuartetas = new ArrayList<>();
+    private final List<CuartetaV1> cuartetas = new ArrayList<>();
     private final TablaTemporales temporales = new TablaTemporales();
     private final TablaEtiquetas etiquetas = new TablaEtiquetas();
     private final TablaOffsets offsets = new TablaOffsets();
@@ -27,7 +27,7 @@ public class GeneradorC3DPig {
         this.genMain = new GeneradorMainPig(cuartetas, temporales, etiquetas, offsets, genSentencias);
     }
 
-    public List<Cuarteta> generar(NodoPrograma programa) {
+    public List<CuartetaV1> generar(NodoPrograma programa) {
         cuartetas.clear();
         temporales.reiniciar();
         etiquetas.reiniciar();

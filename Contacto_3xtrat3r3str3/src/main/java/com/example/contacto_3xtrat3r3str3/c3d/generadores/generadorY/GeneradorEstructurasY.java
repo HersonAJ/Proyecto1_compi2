@@ -1,7 +1,7 @@
 package com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorY;
 
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoAtributo;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoEstructura;
 
@@ -21,9 +21,9 @@ import java.util.List;
  */
 public class GeneradorEstructurasY {
 
-    private final List<Cuarteta> cuartetas;
+    private final List<CuartetaV1> cuartetas;
 
-    public GeneradorEstructurasY(List<Cuarteta> cuartetas) {
+    public GeneradorEstructurasY(List<CuartetaV1> cuartetas) {
         this.cuartetas = cuartetas;
     }
 
@@ -56,6 +56,6 @@ public class GeneradorEstructurasY {
     }
 
     private void emitir(String op, String a1, String a2, String res) {
-        cuartetas.add(new Cuarteta(op, a1, a2, res));
+        cuartetas.add(new CuartetaV1(op, a1, a2, res));
     }
 }

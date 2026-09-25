@@ -21,4 +21,7 @@ public class AccesoEtiqueta extends AccesoMemoria {
     public void aCodigoC(StringBuilder sb) {
         sb.append('L').append(numero);
     }
+
+    @Override
+    public String getTipo() { return "etiqueta"; }
 }

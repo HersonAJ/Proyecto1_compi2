@@ -5,15 +5,15 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2;
  * Se usa para saltar a una etiqueta cuando la comparación es verdadera.
  * Se complementa con Salto para el caso falso.
  */
-public class Condicional extends Cuarteta {
+public class Condicional1 extends Cuarteta {
 
     private final AccesoMemoria izquierda;
     private final String operador;
     private final AccesoMemoria derecha;
     private final int etiqueta;
 
-    public Condicional(AccesoMemoria izquierda, String operador,
-                       AccesoMemoria derecha, int etiqueta) {
+    public Condicional1(AccesoMemoria izquierda, String operador,
+                        AccesoMemoria derecha, int etiqueta) {
         this.izquierda = izquierda;
         this.operador = operador;
         this.derecha = derecha;

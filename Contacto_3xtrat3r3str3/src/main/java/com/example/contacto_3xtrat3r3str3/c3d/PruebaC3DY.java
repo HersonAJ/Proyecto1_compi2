@@ -1,6 +1,8 @@
 package com.example.contacto_3xtrat3r3str3.c3d;
 
-import com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorY.GeneradorC3DY;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorArchivoC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorC;
 import com.example.contacto_3xtrat3r3str3.y.Builder.ASTBuilder;
 import com.example.contacto_3xtrat3r3str3.y.analizador.PreprocesadorIndentacion;
 import com.example.contacto_3xtrat3r3str3.y.ast.NodoAST;
@@ -56,18 +58,21 @@ public class PruebaC3DY {
             return;
         }
 
+        // 5. Semántica
         ValidadorSemantico semantica = new ValidadorSemantico();
         semantica.analizar(programa);
 
-        // 5. Generar cuartetas
-        GeneradorC3DY generador = new GeneradorC3DY();
-        List<Cuarteta> cuartetas = generador.generar(programa);
+        // 6. Generar cuádruplas + FuncionC
+        List<FuncionC> funcionesC = programa.aFuncionesC(semantica.getTabla());
 
-        // 6. Imprimir
-        System.out.println("=== CUARTETAS GENERADAS ===");
-        for (int i = 0; i < cuartetas.size(); i++) {
-            System.out.printf("%3d: %s%n", i + 1, cuartetas.get(i));
-        }
-        System.out.println("Total: " + cuartetas.size());
+        // 7. Generar C
+        String codigoC = new GeneradorC().generar(funcionesC, false);
+
+        // 8. Imprimir C
+        System.out.println("=== CÓDIGO C GENERADO ===");
+        System.out.println(codigoC);
+
+        // 9. Escribir y compilar
+        new GeneradorArchivoC().generarYCompilar(codigoC);
     }
 }

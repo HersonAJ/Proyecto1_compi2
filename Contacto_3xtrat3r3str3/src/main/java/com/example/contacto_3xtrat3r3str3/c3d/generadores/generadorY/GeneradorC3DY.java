@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorY;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaEtiquetas;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaOffsets;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaTemporales;
@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class GeneradorC3DY {
 
-    private final List<Cuarteta> cuartetas = new ArrayList<>();
+    private final List<CuartetaV1> cuartetas = new ArrayList<>();
     private final TablaTemporales temporales = new TablaTemporales();
     private final TablaEtiquetas etiquetas = new TablaEtiquetas();
     private final TablaOffsets offsets = new TablaOffsets();
@@ -41,7 +41,7 @@ public class GeneradorC3DY {
     }
 
     // PUNTO DE ENTRADA
-    public List<Cuarteta> generar(NodoPrograma.Programa programa) {
+    public List<CuartetaV1> generar(NodoPrograma.Programa programa) {
         cuartetas.clear();
         temporales.reiniciar();
         etiquetas.reiniciar();

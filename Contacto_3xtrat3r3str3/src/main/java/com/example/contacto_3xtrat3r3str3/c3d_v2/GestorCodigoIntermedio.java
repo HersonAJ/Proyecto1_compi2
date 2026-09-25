@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2;
 
-import com.example.contacto_3xtrat3r3str3.ir.cuartetas.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.Cuarteta;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

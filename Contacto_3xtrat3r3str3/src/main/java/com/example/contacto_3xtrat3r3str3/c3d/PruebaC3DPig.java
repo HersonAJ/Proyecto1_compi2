@@ -58,7 +58,7 @@ public class PruebaC3DPig {
         semantica.analizar(programa);
 
         GeneradorC3DPig generador = new GeneradorC3DPig();
-        List<Cuarteta> cuartetas = generador.generar(programa);
+        List<CuartetaV1> cuartetas = generador.generar(programa);
 
         //6 imprimir
         System.out.println("=== CUARTETAS GENERADAS ===");

@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d.generadores.generadorPig;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaEtiquetas;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaOffsets;
 import com.example.contacto_3xtrat3r3str3.c3d.TablaTemporales;
@@ -11,12 +11,12 @@ import java.util.List;
 // Genera cuartetas para las expresiones de PigLatin
 public class GeneradorExpresionesPig {
 
-    private final List<Cuarteta> cuartetas;
+    private final List<CuartetaV1> cuartetas;
     private final TablaTemporales temporales;
     private final TablaEtiquetas etiquetas;
     private final TablaOffsets offsets;
 
-    public GeneradorExpresionesPig(List<Cuarteta> cuartetas,
+    public GeneradorExpresionesPig(List<CuartetaV1> cuartetas,
                                    TablaTemporales temporales,
                                    TablaEtiquetas etiquetas,
                                    TablaOffsets offsets) {
@@ -252,6 +252,6 @@ public class GeneradorExpresionesPig {
     }
 
     private void emitir(String op, String a1, String a2, String res) {
-        cuartetas.add(new Cuarteta(op, a1, a2, res));
+        cuartetas.add(new CuartetaV1(op, a1, a2, res));
     }
 }

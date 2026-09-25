@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.generadorC;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 
 /**
  * Maneja las cuartetas que delimitan funciones/bloques:
@@ -20,7 +20,7 @@ public class TraductorFunciones {
         this.traductorCuartetas = traductorCuartetas;
     }
 
-    public boolean procesar(Cuarteta c) {
+    public boolean procesar(CuartetaV1 c) {
         String op = c.operador();
 
         switch (op) {
@@ -45,7 +45,7 @@ public class TraductorFunciones {
     // INICIOS DE BLOQUE
     // ============================================================
 
-    private boolean iniciarFuncion(Cuarteta c) {
+    private boolean iniciarFuncion(CuartetaV1 c) {
         String etiqueta = c.arg1();
         nombreBloqueActual = etiqueta;
 
@@ -57,7 +57,7 @@ public class TraductorFunciones {
         return true;
     }
 
-    private boolean iniciarConstructor(Cuarteta c) {
+    private boolean iniciarConstructor(CuartetaV1 c) {
         String etiqueta = c.arg1();
         nombreBloqueActual = etiqueta;
 
@@ -69,7 +69,7 @@ public class TraductorFunciones {
         return true;
     }
 
-    private boolean iniciarMetodo(Cuarteta c) {
+    private boolean iniciarMetodo(CuartetaV1 c) {
         String etiqueta = c.arg1();
         nombreBloqueActual = etiqueta;
 
@@ -94,7 +94,7 @@ public class TraductorFunciones {
     // CIERRES DE BLOQUE
     // ============================================================
 
-    private boolean cerrarBloque(Cuarteta c) {
+    private boolean cerrarBloque(CuartetaV1 c) {
         // Etiqueta única por función
         escritor.linea(nombreBloqueActual + "_retorno_final:;");
         escritor.linea("goto *pilaRetorno[--ptrRetorno];");

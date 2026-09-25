@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.generadorC;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,9 +24,9 @@ public class GeneradorC {
         this.traductorFunciones = new TraductorFunciones(escritor, traductorCuartetas);
     }
 
-    public void generar(List<Cuarteta> cuartetasY,
-                        List<Cuarteta> cuartetasZ,
-                        List<Cuarteta> cuartetasPig,
+    public void generar(List<CuartetaV1> cuartetasY,
+                        List<CuartetaV1> cuartetasZ,
+                        List<CuartetaV1> cuartetasPig,
                         Path rutaSalida) throws IOException {
 
         escritor.reiniciar();
@@ -127,14 +127,14 @@ public class GeneradorC {
         escritor.vacia();
     }
 
-    private void traducirEstructuras(List<Cuarteta> cuartetas) {
-        for (Cuarteta c : cuartetas) {
+    private void traducirEstructuras(List<CuartetaV1> cuartetas) {
+        for (CuartetaV1 c : cuartetas) {
             traductorEstructuras.procesar(c);
         }
     }
 
-    private void traducirFunciones(List<Cuarteta> cuartetas) {
-        for (Cuarteta c : cuartetas) {
+    private void traducirFunciones(List<CuartetaV1> cuartetas) {
+        for (CuartetaV1 c : cuartetas) {
             if (traductorFunciones.procesar(c)) {
                 continue;
             }
@@ -142,8 +142,8 @@ public class GeneradorC {
         }
     }
 
-    private void traducirCuartetas(List<Cuarteta> cuartetas) {
-        for (Cuarteta c : cuartetas) {
+    private void traducirCuartetas(List<CuartetaV1> cuartetas) {
+        for (CuartetaV1 c : cuartetas) {
             if (traductorFunciones.procesar(c)) {
                 continue;
             }

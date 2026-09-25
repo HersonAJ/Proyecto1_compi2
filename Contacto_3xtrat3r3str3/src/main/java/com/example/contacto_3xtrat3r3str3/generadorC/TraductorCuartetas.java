@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.generadorC;
 
-import com.example.contacto_3xtrat3r3str3.c3d.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d.CuartetaV1;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,7 +19,7 @@ public class TraductorCuartetas {
         this.escritor = escritor;
     }
 
-    public boolean procesar(Cuarteta c) {
+    public boolean procesar(CuartetaV1 c) {
         String op = c.operador();
 
         switch (op) {
@@ -49,7 +49,7 @@ public class TraductorCuartetas {
     // OPERACIONES
     // ============================================================
 
-    private void traducirOperacion(Cuarteta c) {
+    private void traducirOperacion(CuartetaV1 c) {
         String opC = c.operador();
         String a1 = c.arg1();
         String a2 = c.arg2();
@@ -73,7 +73,7 @@ public class TraductorCuartetas {
         escritor.linea(res + ".i = " + a1 + " " + opC + " " + a2 + ";");
     }
 
-    private void traducirAsignacion(Cuarteta c) {
+    private void traducirAsignacion(CuartetaV1 c) {
         String valor = c.arg1();
         String destino = c.resultado();
 
@@ -98,7 +98,7 @@ public class TraductorCuartetas {
         }
     }
 
-    private void traducirConcat(Cuarteta c) {
+    private void traducirConcat(CuartetaV1 c) {
         String resultado = c.resultado();
         String a1 = c.arg1();
         String a2 = c.arg2();
@@ -114,19 +114,19 @@ public class TraductorCuartetas {
     // SALTOS Y ETIQUETAS
     // ============================================================
 
-    private void traducirGoto(Cuarteta c) {
+    private void traducirGoto(CuartetaV1 c) {
         escritor.linea("goto " + c.resultado() + ";");
     }
 
-    private void traducirLabel(Cuarteta c) {
+    private void traducirLabel(CuartetaV1 c) {
         escritor.linea(c.resultado() + ":;");
     }
 
-    private void traducirIfSimple(Cuarteta c) {
+    private void traducirIfSimple(CuartetaV1 c) {
         escritor.linea("if (" + c.arg1() + ") goto " + c.resultado() + ";");
     }
 
-    private void traducirIfRelacional(Cuarteta c) {
+    private void traducirIfRelacional(CuartetaV1 c) {
         String operador = c.operador().substring(2);
         escritor.linea("if (" + c.arg1() + " " + operador + " " + c.arg2() + ") goto " + c.resultado() + ";");
     }
@@ -135,7 +135,7 @@ public class TraductorCuartetas {
     // PRINT / READ
     // ============================================================
 
-    private void traducirPrint(Cuarteta c) {
+    private void traducirPrint(CuartetaV1 c) {
         String valor = c.arg1();
 
         if (valor.startsWith("\"")) {
@@ -151,7 +151,7 @@ public class TraductorCuartetas {
         }
     }
 
-    private void traducirPrintln(Cuarteta c) {
+    private void traducirPrintln(CuartetaV1 c) {
         String valor = c.arg1();
 
         if (valor.startsWith("\"")) {
@@ -167,7 +167,7 @@ public class TraductorCuartetas {
         }
     }
 
-    private void traducirRead(Cuarteta c) {
+    private void traducirRead(CuartetaV1 c) {
         String destino = c.resultado();
         if (!destino.equals("-")) {
             escritor.linea("scanf(\"%d\", &" + destino + ");");
@@ -180,7 +180,7 @@ public class TraductorCuartetas {
     // RETURN
     // ============================================================
 
-    private void traducirReturn(Cuarteta c) {
+    private void traducirReturn(CuartetaV1 c) {
         String valor = c.arg1();
 
         if (valor.equals("-")) {
@@ -201,7 +201,7 @@ public class TraductorCuartetas {
     // PARAM / CALL / NEW
     // ============================================================
 
-    private void traducirParam(Cuarteta c) {
+    private void traducirParam(CuartetaV1 c) {
         String valor = c.arg1();
 
         if (valor.startsWith("stack[")) {
@@ -215,7 +215,7 @@ public class TraductorCuartetas {
         escritor.linea("stack[SP++]" + campo + " = " + valor + ";");
     }
 
-    private void traducirCall(Cuarteta c) {
+    private void traducirCall(CuartetaV1 c) {
         String nombre = c.arg1();
         String resultado = c.resultado();
 
@@ -236,7 +236,7 @@ public class TraductorCuartetas {
         escritor.linea(resultado + ".i = valorRetorno;");
     }
 
-    private void traducirNew(Cuarteta c) {
+    private void traducirNew(CuartetaV1 c) {
         String tipo = c.arg1();
         String resultado = c.resultado();
 

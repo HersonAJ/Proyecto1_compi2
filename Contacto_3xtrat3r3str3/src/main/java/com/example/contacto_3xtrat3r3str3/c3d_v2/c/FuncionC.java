@@ -16,26 +16,30 @@ public class FuncionC {
     private final String tipoRetornoC;
     private final String nombre;
     private final List<ParametroC> parametros;
+    private final List<VariableLocalC> variablesLocales;   // NUEVO
     private final List<Cuarteta> cuartetas;
     private final List<String> tiposTemporales;
 
     public FuncionC(String tipoRetornoC,
                     String nombre,
                     List<ParametroC> parametros,
+                    List<VariableLocalC> variablesLocales,   // NUEVO
                     List<Cuarteta> cuartetas,
                     List<String> tiposTemporales) {
         this.tipoRetornoC = tipoRetornoC;
         this.nombre = nombre;
         this.parametros = parametros;
+        this.variablesLocales = variablesLocales;
         this.cuartetas = cuartetas;
         this.tiposTemporales = tiposTemporales;
     }
 
-    public String getTipoRetornoC()         { return tipoRetornoC; }
-    public String getNombre()               { return nombre; }
-    public List<ParametroC> getParametros() { return parametros; }
-    public List<Cuarteta> getCuartetas()    { return cuartetas; }
-    public List<String> getTiposTemporales(){ return tiposTemporales; }
+    public String getTipoRetornoC()             { return tipoRetornoC; }
+    public String getNombre()                   { return nombre; }
+    public List<ParametroC> getParametros()     { return parametros; }
+    public List<VariableLocalC> getVariablesLocales() { return variablesLocales; }
+    public List<Cuarteta> getCuartetas()        { return cuartetas; }
+    public List<String> getTiposTemporales()    { return tiposTemporales; }
 
     public void escribirCabecera(StringBuilder sb) {
         sb.append(tipoRetornoC).append(' ').append(nombre).append('(');
