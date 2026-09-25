@@ -185,11 +185,22 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
     //instrucciones
     @Override
     public NodoAST visitInstruccion(YParser.InstruccionContext ctx) {
-        //regla contenedora que delega al hijo correspondiente
-        if (ctx.getChild(0) == null) {
+        var hijo = ctx.getChild(0);
+        if (hijo == null) {
             return null;
         }
-        return visit(ctx.getChild(0));
+
+        // Caso especial: una definicion de estructura dentro de una funcion
+        if (hijo instanceof YParser.DefinicionEstructuraContext defCtx) {
+            NodoAST nodo = visit(defCtx);
+            if (nodo instanceof NodoEstructura.Estructura estructura) {
+                return new NodoSentencia.DeclaracionEstructuraLocal(
+                        linea(ctx), columna(ctx), estructura);
+            }
+            return null;
+        }
+
+        return visit(hijo);
     }
 
     //declaraciones
@@ -301,6 +312,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Leer(linea(ctx), columna(ctx));
     }
 
+    @Override
+    public NodoAST visitExprLeer(YParser.ExprLeerContext ctx) {
+        return new NodoExpr.Leer(linea(ctx), columna(ctx));
+    }
     @Override
     public NodoAST visitRomper(YParser.RomperContext ctx) {
         return new NodoSentencia.Romper(linea(ctx), columna(ctx));

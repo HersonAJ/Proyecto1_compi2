@@ -49,6 +49,7 @@ instruccion : declaracion
             | leer
             | romper
             | continuar
+            | definicionEstructura
             ;
 
 //declaraciones
@@ -142,6 +143,7 @@ expresion   : PAR_IZQ expresion PAR_DER                         # ExprParentesis
             | expresion (IGUAL_IGUAL | DIFERENTE) expresion     # ExprIgualdad
             | expresion AND expresion                           # ExprAnd
             | expresion OR expresion                            # ExprOr
+            | LEER PAR_IZQ PAR_DER                              # ExprLeer
             ;
 
 argumentos  : expresion (COMA expresion)*

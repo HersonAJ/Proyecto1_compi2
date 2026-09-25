@@ -18,5 +18,6 @@ public enum TipoNodoExpr {
     UNARIA,
 
     //LAMADAS
-    LLAMADA_FUNCION
+    LLAMADA_FUNCION,
+    LEER
 }

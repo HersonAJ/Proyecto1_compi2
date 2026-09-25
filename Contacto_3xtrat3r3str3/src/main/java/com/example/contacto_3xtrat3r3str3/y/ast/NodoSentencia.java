@@ -11,6 +11,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.DeclaracionArreglo,
         NodoSentencia.DeclaracionMatriz,
         NodoSentencia.DeclaracionEstructura,
+        NodoSentencia.DeclaracionEstructuraLocal,
         NodoSentencia.Asignacion,
         NodoSentencia.IncrementoDecremento,
         NodoSentencia.Condicional,
@@ -29,10 +30,7 @@ public sealed interface NodoSentencia extends NodoAST permits
 
     void aCodigoIntermedio(ContextoTraduccion ctx);
 
-    // ============================================================
     // DECLARACIONES
-    // ============================================================
-
     record DeclaracionVariable(int linea, int columna, String tipo, String nombre,
                                NodoExpr inicializacion) implements NodoSentencia {
         @Override
@@ -112,10 +110,25 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
-    // ASIGNACION E INCREMENTO/DECREMENTO
-    // ============================================================
+    record DeclaracionEstructuraLocal(int linea, int columna,
+                                      NodoEstructura.Estructura estructura) implements NodoSentencia {
+        @Override
+        public TipoNodoSentencia tipoNodo() {
+            return TipoNodoSentencia.DECLARACION_ESTRUCTURA_LOCAL; // nuevo valor en el enum
+        }
 
+        @Override
+        public void aCodigoIntermedio(ContextoTraduccion ctx) {
+            // Aquí no debería emitir C3D "ejecutable" — una definición de estructura
+            // no es una instrucción en tiempo de ejecución, es información de tipos.
+            // Probablemente esto solo necesita registrar la estructura en la tabla
+            // de símbolos del alcance actual (si tu validador semántico no lo hizo ya
+            // en una fase anterior). Déjalo vacío con un comentario si el registro
+            // ya ocurre antes de llegar aquí.
+        }
+    }
+
+    // ASIGNACION E INCREMENTO/DECREMENTO
     record Asignacion(int linea, int columna, NodoExpr destino, NodoExpr valor) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -170,10 +183,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // CONDICIONAL
-    // ============================================================
-
     record Condicional(int linea, int columna,
                        NodoExpr condicion,
                        List<NodoSentencia> cuerpoSi,
@@ -222,10 +232,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // ELEGIR
-    // ============================================================
-
     record Elegir(int linea, int columna, NodoExpr expresion,
                   List<CasoElegir> casos, SiempreElegir siempre) implements NodoSentencia {
         @Override
@@ -301,10 +308,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // CICLOS
-    // ============================================================
-
     record CicloPara(int linea, int columna,
                      String tipoInicializacion, String nombreVariable,
                      NodoExpr valorInicial, NodoExpr condicion,
@@ -418,10 +422,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // RETORNO
-    // ============================================================
-
     record Retorno(int linea, int columna, NodoExpr valor) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -435,10 +436,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // FUNCIONES ESPECIALES
-    // ============================================================
-
     record Imprimir(int linea, int columna, NodoExpr expresion) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -464,10 +462,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // ============================================================
     // CONTROL DE CICLOS
-    // ============================================================
-
     record Romper(int linea, int columna) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {

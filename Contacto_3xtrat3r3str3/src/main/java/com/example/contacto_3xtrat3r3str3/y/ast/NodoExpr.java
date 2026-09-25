@@ -24,16 +24,14 @@ public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.AccesoAtributo,
         NodoExpr.Binaria,
         NodoExpr.Unaria,
-        NodoExpr.LlamadaFuncion {
+        NodoExpr.LlamadaFuncion,
+        NodoExpr.Leer {
 
     TipoNodoExpr tipoNodo();
 
     AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx);
 
-    // ============================================================
     // LITERALES
-    // ============================================================
-
     record LiteralEntero(int linea, int columna, int valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_ENTERO; }
@@ -84,10 +82,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // ============================================================
     // ACCESOS
-    // ============================================================
-
     record Identificador(int linea, int columna, String nombre) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.IDENTIFICADOR; }
@@ -127,10 +122,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // ============================================================
     // OPERACIONES
-    // ============================================================
-
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.BINARIA; }
@@ -226,10 +218,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // ============================================================
     // LLAMADAS A FUNCION
-    // ============================================================
-
     record LlamadaFuncion(int linea, int columna, String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_FUNCION; }
@@ -264,6 +253,20 @@ public sealed interface NodoExpr extends NodoAST permits
             AccesoTemporal t = new AccesoTemporal(idT, funcion.tipoRetorno());
             g.emitir(new Llamada(t, nombre, args));
             return t;
+        }
+    }
+    // LEER COMO EXPRESION
+    record Leer(int linea, int columna) implements NodoExpr {
+        @Override
+        public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LEER; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx) {
+            // TODO: implementar en el paso correspondiente — necesita una
+            // instrucción C3D de lectura hacia un temporal (equivalente de
+            // lectura a lo que Imprimir1 es de escritura). Sigue el mismo
+            // patrón que AccesoArray/AccesoAtributo por ahora.
+            throw new UnsupportedOperationException("Leer (expresion) pendiente");
         }
     }
 }
