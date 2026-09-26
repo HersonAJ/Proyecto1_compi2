@@ -25,7 +25,8 @@ import java.util.Map;
  *   - import carpeta.Archivo.y  → carga estructuras y funciones de Y?.
  *   - import carpeta.Archivo.z  → carga la clase pública de Zetariano.
  *
- * Si un archivo importado tiene errores, se reportan y se aborta.
+ * Además de poblar la tabla de símbolos, genera los FuncionC y EstructuraC
+ * de los archivos importados para que el CompiladorPig los incluya en el .c final.
  */
 public class ValidadorImportacionesPig {
 
@@ -33,12 +34,25 @@ public class ValidadorImportacionesPig {
     private final List<ErrorSemantico> errores;
     private final Path carpetaRaiz;
 
+    // NUEVOS: código C generado de los imports
+    private final List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC> funcionesImportadas = new ArrayList<>();
+    private final List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.EstructuraC> estructurasImportadas = new ArrayList<>();
+
     public ValidadorImportacionesPig(TablaSimbolosPig tabla,
                                      List<ErrorSemantico> errores,
                                      Path carpetaRaiz) {
         this.tabla = tabla;
         this.errores = errores;
         this.carpetaRaiz = carpetaRaiz;
+    }
+
+    // NUEVOS: getters
+    public List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC> getFuncionesImportadas() {
+        return funcionesImportadas;
+    }
+
+    public List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.EstructuraC> getEstructurasImportadas() {
+        return estructurasImportadas;
     }
 
     //Procesa todas las importaciones del programa. Devuelve true si todas se cargaron correctamente.
@@ -108,7 +122,7 @@ public class ValidadorImportacionesPig {
             return false;
         }
 
-        // Cargar estructuras
+        // Cargar estructuras y funciones en la tabla
         if (resultado.getPrograma() != null) {
             for (NodoEstructura est : resultado.getPrograma().estructuras()) {
                 NodoEstructura.Estructura e = (NodoEstructura.Estructura) est;
@@ -121,7 +135,6 @@ public class ValidadorImportacionesPig {
                 tabla.declararEstructura(e.nombre(), atributos);
             }
 
-            // Cargar funciones
             for (NodoFuncion f : resultado.getPrograma().funciones()) {
                 NodoFuncion.Funcion fn = (NodoFuncion.Funcion) f;
                 List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
@@ -132,6 +145,16 @@ public class ValidadorImportacionesPig {
                             param.nombre(), tipo, param.esArreglo() ? 1 : 0));
                 }
                 tabla.declararFuncion(fn.nombre(), params, fn.tipoRetorno());
+            }
+        }
+
+        // NUEVO: generar FuncionC y EstructuraC del .y importado
+        if (resultado.getPrograma() != null) {
+            estructurasImportadas.addAll(resultado.getPrograma().aEstructurasC());
+
+            var tablaY = resultado.getTablaSimbolos();
+            if (tablaY != null) {
+                funcionesImportadas.addAll(resultado.getPrograma().aFuncionesC(tablaY));
             }
         }
 
@@ -176,7 +199,7 @@ public class ValidadorImportacionesPig {
             return false;
         }
 
-        // Cargar la clase
+        // Cargar la clase en la tabla
         if (resultado.getPrograma() != null) {
             NodoClase clase = resultado.getPrograma().clase();
 
@@ -210,6 +233,14 @@ public class ValidadorImportacionesPig {
             TablaSimbolosPig.DefinicionClase def = new TablaSimbolosPig.DefinicionClase(
                     clase.nombre(), atributos, constructores, metodos);
             tabla.declararClase(def);
+
+            // NUEVO: generar FuncionC y EstructuraC del .z importado
+            estructurasImportadas.add(clase.aEstructuraC());
+
+            var tablaZ = resultado.getTablaSimbolos();
+            if (tablaZ != null) {
+                funcionesImportadas.addAll(clase.aFuncionesC(tablaZ));
+            }
         }
 
         return true;

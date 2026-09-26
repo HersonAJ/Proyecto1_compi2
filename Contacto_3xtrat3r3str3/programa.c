@@ -2,11 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-int testMatriz(void);
+int edad = 20;
+char* nombre = "Comandante";
 
-int testMatriz(void) {
-    int m[3][2] = {{1, 2}, {3, 4}, {5, 6}};
+int main(void);
 
-    return m[0][0];
+int main(void) {
+    int t0;
+    int t1;
+
+    printf("%s", "Hola!");
+    printf("%s", nombre);
+    t0 = (int) edad;
+    t1 = t0 + 1;
+    edad = t1;
+    printf("%s", "Edad actualizada");
+    return 0;
 }
 

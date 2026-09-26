@@ -287,4 +287,8 @@ public class ValidadorSemanticoPig {
     public TablaSimbolosPig getTabla() {
         return tabla;
     }
+
+    public ValidadorImportacionesPig getImportaciones() {
+        return importaciones;
+    }
 }

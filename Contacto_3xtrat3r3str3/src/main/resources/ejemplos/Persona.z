@@ -1,18 +1,21 @@
-public class TestMatrices {
-    int[][] matriz;
+public class Persona {
+    String nombre;
+    int edad;
 
-    public TestMatrices() {
-        matriz = new int[3][3];
+    public Persona(String nombreParametro, int edadParametro) {
+        nombre = nombreParametro;
+        edad = edadParametro;
     }
 
-    public void probar() {
-        matriz[0][0] = 1;
-        matriz[0][1] = 2;
-        matriz[1][0] = 3;
-        int suma = matriz[0][0] + matriz[1][0];
-        println("Matriz OK");
+    public String getNombre() {
+        return nombre;
+    }
 
-        int[][] locales = new int[2][2];
-        locales[0][0] = 100;
+    public int getEdad() {
+        return edad;
+    }
+
+    public void saludar() {
+        println("Hola desde Persona");
     }
 }

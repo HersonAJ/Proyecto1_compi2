@@ -68,7 +68,8 @@ public class PruebaC3DZ {
         List<EstructuraC> estructurasC = programa.aEstructurasC();
         List<FuncionC> funcionesC = programa.aFuncionesC(semantica.getTabla());
 
-        String codigoC = new GeneradorC().generar(funcionesC, estructurasC, false);
+        String codigoC = new GeneradorC().generar(funcionesC, estructurasC,
+                new java.util.ArrayList<>(), false);
 
         System.out.println("\n=== CÓDIGO C GENERADO ===");
         System.out.println(codigoC);

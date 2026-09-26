@@ -268,14 +268,32 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     record Escritura(int linea, int columna, List<NodoExpr> valores) implements NodoSentencia {
-        @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ESCRITURA; }
+        @Override
+        public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ESCRITURA; }
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             for (NodoExpr valor : valores) {
                 AccesoMemoria acc = valor.aCodigoIntermedio(ctx);
-                ctx.getGestor().emitir(new ImprimirPig(acc, acc.getTipo()));
+                String tipoPig = tipoPigLatinDe(valor, ctx);
+                ctx.getGestor().emitir(new ImprimirPig(acc, tipoPig));
             }
+        }
+
+        private String tipoPigLatinDe(NodoExpr expr, ContextoTraduccionPig ctx) {
+            if (expr instanceof NodoExpr.LiteralEntero) return "numerus";
+            if (expr instanceof NodoExpr.LiteralDecimal) return "decimalis";
+            if (expr instanceof NodoExpr.LiteralTexto) return "textum";
+            if (expr instanceof NodoExpr.LiteralCaracter) return "littera";
+            if (expr instanceof NodoExpr.LiteralBool) return "bool";
+
+            if (expr instanceof NodoExpr.Identificador id) {
+                return ctx.getTabla().buscarVariable(id.nombre())
+                        .map(s -> s.tipo())
+                        .orElse("numerus");
+            }
+
+            return "numerus"; // fallback
         }
     }
 
@@ -315,5 +333,24 @@ public sealed interface NodoSentencia extends NodoAST permits
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             llamada.aCodigoIntermedio(ctx);
         }
+    }
+
+    private String tipoPigLatinDe(NodoExpr expr, ContextoTraduccionPig ctx) {
+        // Literales: ya sabemos su tipo PigLatin
+        if (expr instanceof NodoExpr.LiteralEntero) return "numerus";
+        if (expr instanceof NodoExpr.LiteralDecimal) return "decimalis";
+        if (expr instanceof NodoExpr.LiteralTexto) return "textum";
+        if (expr instanceof NodoExpr.LiteralCaracter) return "littera";
+        if (expr instanceof NodoExpr.LiteralBool) return "bool";
+
+        // Identificadores: consultar la tabla
+        if (expr instanceof NodoExpr.Identificador id) {
+            return ctx.getTabla().buscarVariable(id.nombre())
+                    .map(s -> s.tipo())
+                    .orElse("numerus");
+        }
+
+        // Otros casos: fallback a numerus
+        return "numerus";
     }
 }

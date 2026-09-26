@@ -68,7 +68,8 @@ public class PruebaC3DY {
 
         // 7. Generar C
         List<EstructuraC> estructurasC = programa.aEstructurasC();
-        String codigoC = new GeneradorC().generar(funcionesC, estructurasC, false);
+        String codigoC = new GeneradorC().generar(funcionesC, estructurasC,
+                new java.util.ArrayList<>(), false);
 
         // 8. Imprimir C
         System.out.println("=== CÓDIGO C GENERADO ===");

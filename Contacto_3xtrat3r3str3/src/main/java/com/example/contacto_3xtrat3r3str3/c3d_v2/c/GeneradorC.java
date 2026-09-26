@@ -12,11 +12,15 @@ public class GeneradorC {
         this.sb = new StringBuilder();
     }
 
-    public String generar(List<FuncionC> funciones, List<EstructuraC> estructuras, boolean incluirMain) {
+    public String generar(List<FuncionC> funciones,
+                          List<EstructuraC> estructuras,
+                          List<ParametroC> variablesGlobales,
+                          boolean incluirMain) {
         sb.setLength(0);
 
         escribirCabeceraArchivo();
         escribirEstructuras(estructuras);
+        escribirVariablesGlobales(variablesGlobales);
         escribirPrototipos(funciones);
 
         for (FuncionC f : funciones) {
@@ -115,5 +119,13 @@ public class GeneradorC {
                 || tipo.equals("char")
                 || tipo.equals("void")
                 || tipo.equals("long");
+    }
+
+    private void escribirVariablesGlobales(List<ParametroC> variables) {
+        if (variables == null || variables.isEmpty()) return;
+        for (ParametroC v : variables) {
+            sb.append(v.getTipoC()).append(' ').append(v.getNombre()).append(";\n");
+        }
+        sb.append('\n');
     }
 }
