@@ -15,18 +15,29 @@ public class ResultadoCompilacionPig {
     private final List<ErrorSemantico> erroresSemanticos;
     private final List<String> mensajesInternos;
 
+    // cdigo C generado y resultado de gcc
+    private final String codigoCGenerado;
+    private final boolean compilacionCExitosa;
+    private final String rutaEjecutable;
+
     public ResultadoCompilacionPig(boolean exitoso,
                                    NodoPrograma programa,
                                    List<ErrorPosicional> erroresLexico,
                                    List<ErrorPosicional> erroresSintacticos,
                                    List<ErrorSemantico> erroresSemanticos,
-                                   List<String> mensajesInterno) {
+                                   List<String> mensajesInterno,
+                                   String codigoCGenerado,
+                                   boolean compilacionCExitosa,
+                                   String rutaEjecutable) {
         this.exitoso = exitoso;
         this.programa = programa;
         this.erroresLexicos = erroresLexico;
         this.erroresSintacticos = erroresSintacticos;
         this.erroresSemanticos = erroresSemanticos;
         this.mensajesInternos = mensajesInterno;
+        this.codigoCGenerado = codigoCGenerado;
+        this.compilacionCExitosa = compilacionCExitosa;
+        this.rutaEjecutable = rutaEjecutable;
     }
 
     public boolean isExitoso() { return exitoso; }
@@ -35,6 +46,10 @@ public class ResultadoCompilacionPig {
     public List<ErrorPosicional> getErroresSintacticos() { return erroresSintacticos; }
     public List<ErrorSemantico> getErroresSemanticos() { return erroresSemanticos; }
     public List<String> getMensajesInternos() { return mensajesInternos; }
+
+    public String getCodigoCGenerado() { return codigoCGenerado; }
+    public boolean isCompilacionCExitosa() { return compilacionCExitosa; }
+    public String getRutaEjecutable() { return rutaEjecutable; }
 
     public boolean hayErrores() {
         return !erroresLexicos.isEmpty()

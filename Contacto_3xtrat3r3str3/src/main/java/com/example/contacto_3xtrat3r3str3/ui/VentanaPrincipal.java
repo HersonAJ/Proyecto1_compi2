@@ -371,6 +371,21 @@ public class VentanaPrincipal {
 
         if (resultado.isExitoso()) {
             panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+
+            if (resultado.getCodigoCGenerado() != null) {
+                panelSalida.imprimirConsola("");
+                panelSalida.imprimirConsola("=== CÓDIGO C GENERADO ===");
+                panelSalida.imprimirConsola(resultado.getCodigoCGenerado());
+            }
+
+            if (resultado.isCompilacionCExitosa()) {
+                panelSalida.imprimirConsola("");
+                panelSalida.imprimirConsola("[OK] gcc compiló exitosamente.");
+                panelSalida.imprimirConsola("Ejecutable: " + resultado.getRutaEjecutable());
+            } else {
+                panelSalida.imprimirConsola("");
+                panelSalida.imprimirConsola("[ERROR] gcc no pudo compilar el código C.");
+            }
         } else {
             panelSalida.imprimirConsola(
                     "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");

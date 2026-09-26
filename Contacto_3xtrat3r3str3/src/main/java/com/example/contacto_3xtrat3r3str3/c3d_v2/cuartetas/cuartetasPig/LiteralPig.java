@@ -26,8 +26,16 @@ public class LiteralPig extends AccesoMemoria {
         switch (tipo) {
             case "textum"  -> sb.append('"').append(valor).append('"');
             case "littera" -> sb.append('\'').append(valor).append('\'');
-            case "bool"    -> sb.append(((Boolean) valor) ? 1 : 0);
-            default        -> sb.append(valor);   // numerus, decimalis
+            case "bool"    -> {
+                if (valor instanceof Boolean b) {
+                    sb.append(b ? 1 : 0);
+                } else if (valor instanceof Number n) {
+                    sb.append(n.intValue() != 0 ? 1 : 0);
+                } else {
+                    sb.append(valor);
+                }
+            }
+            default -> sb.append(valor);
         }
     }
 }

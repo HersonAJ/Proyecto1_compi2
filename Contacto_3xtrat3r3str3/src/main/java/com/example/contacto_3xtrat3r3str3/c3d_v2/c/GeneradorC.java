@@ -38,6 +38,14 @@ public class GeneradorC {
         sb.append("#include <stdio.h>\n");
         sb.append("#include <stdlib.h>\n");
         sb.append("#include <string.h>\n\n");
+
+        // Función auxiliar para concatenar cadenas.
+        sb.append("char* concat(char* a, char* b) {\n");
+        sb.append("    char* r = malloc(strlen(a) + strlen(b) + 1);\n");
+        sb.append("    strcpy(r, a);\n");
+        sb.append("    strcat(r, b);\n");
+        sb.append("    return r;\n");
+        sb.append("}\n\n");
     }
 
     private void escribirEstructuras(List<EstructuraC> estructuras) {
@@ -75,8 +83,7 @@ public class GeneradorC {
         List<String> tipos = f.getTiposTemporales();
         for (int i = 0; i < tipos.size(); i++) {
             String tipoTemp = tipos.get(i);
-            if ("cadena".equals(tipoTemp) || "textum".equals(tipoTemp)) {
-                // Temporal de cadena: puntero, no buffer.
+            if ("cadena".equals(tipoTemp) || "textum".equals(tipoTemp) || "String".equals(tipoTemp)) {
                 sb.append("    char* t").append(i).append(";\n");
             } else if (esTipoC(tipoTemp)) {
                 // El tipo ya viene en formato C (struct X*, int, double, char, etc.)

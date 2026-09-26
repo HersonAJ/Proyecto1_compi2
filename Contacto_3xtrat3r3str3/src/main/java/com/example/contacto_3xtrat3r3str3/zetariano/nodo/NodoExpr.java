@@ -205,8 +205,17 @@ public sealed interface NodoExpr extends NodoAST permits
             AccesoMemoria izq = izquierda.aCodigoIntermedio(ctx);
             AccesoMemoria der = derecha.aCodigoIntermedio(ctx);
 
-            // Caso especial: == y != con String -> strcmp
             boolean hayString = "String".equals(izq.getTipo()) || "String".equals(der.getTipo());
+
+            // Caso especial: '+' con String -> concatenación
+            if ("+".equals(operador) && hayString) {
+                int idT = g.getContador().siguienteTemporal("String");
+                AccesoTemporal t = new AccesoTemporal(idT, "String");
+                g.emitir(new OperacionBinaria(t, izq, "concat", der));
+                return t;
+            }
+
+            // Caso especial: == y != con String -> strcmp
             boolean esComparacion = "==".equals(operador) || "!=".equals(operador);
             if (hayString && esComparacion) {
                 int idCmp = g.getContador().siguienteTemporal("int");

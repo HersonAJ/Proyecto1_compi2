@@ -1,30 +1,28 @@
 package com.example.contacto_3xtrat3r3str3.piglatin.service;
 
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.EstructuraC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorArchivoC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.GeneradorC;
 import com.example.contacto_3xtrat3r3str3.piglatin.builder.ASTBuilderPig;
 import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoAST;
 import com.example.contacto_3xtrat3r3str3.piglatin.nodo.NodoPrograma;
+import com.example.contacto_3xtrat3r3str3.piglatin.semantica.ValidadorSemanticoPig;
 import com.example.contacto_3xtrat3r3str3.y.errores.ErrorPosicional;
 import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import com.example.piglatin.analizador.gramatica.PigLexer;
 import com.example.piglatin.analizador.gramatica.PigParser;
 import org.antlr.v4.runtime.*;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Orquesta el pipeline de compilación para PigLatin:
- *   1. Lexer
- *   2. Parser
- *   3. ASTBuilder
- *   4. Análisis semántico (pendiente)
- *   5. Carga de importaciones (pendiente)
- */
 public class ServicioCompilacionPig {
 
     private static final boolean DEBUG = true;
 
-    public ResultadoCompilacionPig analizar(String codigoFuente, java.nio.file.Path carpetaRaiz) {
+    public ResultadoCompilacionPig analizar(String codigoFuente, Path carpetaRaiz) {
         if (DEBUG) {
             System.out.println("=== INICIO ANALISIS PIGLATIN ===");
         }
@@ -33,7 +31,8 @@ public class ServicioCompilacionPig {
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
-                    List.of("El código está vacío")
+                    List.of("El código está vacío"),
+                    null, false, null
             );
         }
 
@@ -43,19 +42,21 @@ public class ServicioCompilacionPig {
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
-                    List.of("Estructura demasiado profunda o inválida.")
+                    List.of("Estructura demasiado profunda o inválida."),
+                    null, false, null
             );
         } catch (Exception e) {
             if (DEBUG) e.printStackTrace();
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
-                    List.of("Error interno inesperado: " + e.getMessage())
+                    List.of("Error interno inesperado: " + e.getMessage()),
+                    null, false, null
             );
         }
     }
 
-    private ResultadoCompilacionPig analizarInterno(String codigoFuente, java.nio.file.Path carpetaRaiz) {
+    private ResultadoCompilacionPig analizarInterno(String codigoFuente, Path carpetaRaiz) {
 
         // 1. LEXER
         List<ErrorPosicional> erroresLexicos = new ArrayList<>();
@@ -77,7 +78,8 @@ public class ServicioCompilacionPig {
         if (!erroresLexicos.isEmpty()) {
             return new ResultadoCompilacionPig(
                     false, null,
-                    erroresLexicos, List.of(), List.of(), List.of()
+                    erroresLexicos, List.of(), List.of(), List.of(),
+                    null, false, null
             );
         }
 
@@ -107,7 +109,8 @@ public class ServicioCompilacionPig {
         if (!erroresSintacticos.isEmpty()) {
             return new ResultadoCompilacionPig(
                     false, null,
-                    List.of(), erroresSintacticos, List.of(), List.of()
+                    List.of(), erroresSintacticos, List.of(), List.of(),
+                    null, false, null
             );
         }
 
@@ -122,7 +125,8 @@ public class ServicioCompilacionPig {
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
-                    List.of("Error al construir el AST: " + e.getMessage())
+                    List.of("Error al construir el AST: " + e.getMessage()),
+                    null, false, null
             );
         }
 
@@ -130,31 +134,59 @@ public class ServicioCompilacionPig {
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
-                    List.of("El AST resultante es nulo")
+                    List.of("El AST resultante es nulo"),
+                    null, false, null
             );
         }
 
         // 4. VALIDACIÓN SEMÁNTICA
         List<ErrorSemantico> erroresSemanticos = new ArrayList<>();
+        ValidadorSemanticoPig validador = null;
         try {
-            com.example.contacto_3xtrat3r3str3.piglatin.semantica.ValidadorSemanticoPig validador =
-                    new com.example.contacto_3xtrat3r3str3.piglatin.semantica.ValidadorSemanticoPig(carpetaRaiz);
+            validador = new ValidadorSemanticoPig(carpetaRaiz);
             erroresSemanticos = validador.analizar(programa);
         } catch (Exception e) {
             if (DEBUG) e.printStackTrace();
             return new ResultadoCompilacionPig(
                     false, programa,
                     List.of(), List.of(), List.of(),
-                    List.of("Error en validación semántica: " + e.getMessage())
+                    List.of("Error en validación semántica: " + e.getMessage()),
+                    null, false, null
             );
         }
 
-        // 5. RESULTADO
         boolean exitoso = erroresSemanticos.isEmpty();
+
+        // 5. GENERACIÓN DE C (solo si no hay errores semánticos)
+        String codigoC = null;
+        boolean compilacionOk = false;
+        String rutaExe = null;
+
+        if (exitoso) {
+            try {
+                codigoC = generarCodigoC(programa, validador);
+
+                GeneradorArchivoC generadorArchivo = new GeneradorArchivoC();
+                compilacionOk = generadorArchivo.generarYCompilar(codigoC);
+
+                if (compilacionOk) {
+                    rutaExe = Paths.get(System.getProperty("user.dir"), "programa")
+                            .toAbsolutePath().toString();
+                }
+            } catch (Exception e) {
+                if (DEBUG) e.printStackTrace();
+                erroresSemanticos.add(new ErrorSemantico(
+                        -1, -1, "Generación C",
+                        "Error al generar/compilar el código C: " + e.getMessage()));
+                exitoso = false;
+            }
+        }
 
         if (DEBUG) {
             System.out.println("Análisis completado. Exitoso: " + exitoso);
             System.out.println("  Errores semánticos: " + erroresSemanticos.size());
+            System.out.println("  Código C: " + (codigoC != null ? codigoC.length() + " caracteres" : "no generado"));
+            System.out.println("  Compilación gcc: " + (compilacionOk ? "OK" : "falló"));
             System.out.println("=== FIN ANALISIS PIGLATIN ===");
         }
 
@@ -164,7 +196,39 @@ public class ServicioCompilacionPig {
                 List.of(),
                 List.of(),
                 erroresSemanticos,
-                List.of()
+                List.of(),
+                codigoC,
+                compilacionOk,
+                rutaExe
         );
+    }
+
+    // Genera el código C combinando imports (.y, .z) con el .pig
+    private String generarCodigoC(NodoPrograma programa, ValidadorSemanticoPig validador) {
+        // Recoger imports (FuncionC, EstructuraC) del semántico
+        var importaciones = validador.getImportaciones();
+        var funcionesImportadas = importaciones.getFuncionesImportadas();
+        var estructurasImportadas = importaciones.getEstructurasImportadas();
+
+        // Tabla del .pig
+        var tabla = validador.getTabla();
+
+        // Variables globales y main del .pig
+        var variablesGlobales = programa.aVariablesGlobalesC(tabla);
+        var mainC = programa.aMainC(tabla);
+
+        // Combinar
+        var funciones = new ArrayList<>(funcionesImportadas);
+        funciones.add(mainC);
+        var estructuras = new ArrayList<EstructuraC>();
+        var nombresVistos = new java.util.HashSet<String>();
+        for (var e : estructurasImportadas) {
+            if (nombresVistos.add(e.getNombre())) {
+                estructuras.add(e);
+            }
+        }
+
+        // Generar
+        return new GeneradorC().generar(funciones, estructuras, variablesGlobales, false);
     }
 }

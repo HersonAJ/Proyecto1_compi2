@@ -128,7 +128,7 @@ public sealed interface NodoSentencia extends NodoAST permits
 
             // Rama si
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
-            g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "bool"), lSiguiente));
+            g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "numerus"), lSiguiente));
 
             for (NodoSentencia s : cuerpoSi) s.aCodigoIntermedio(ctx);
             g.emitir(new Salto(lFin));
@@ -139,7 +139,7 @@ public sealed interface NodoSentencia extends NodoAST permits
             for (RamaAliter rama : ramasAliter) {
                 int lSiguienteRama = c.siguienteEtiqueta();
                 AccesoMemoria condRama = rama.condicion().aCodigoIntermedio(ctx);
-                g.emitir(new Condicional1(condRama, "==", new LiteralPig(0, "bool"), lSiguienteRama));
+                g.emitir(new Condicional1(condRama, "==", new LiteralPig(0, "numerus"), lSiguienteRama));
 
                 for (NodoSentencia s : rama.cuerpo()) s.aCodigoIntermedio(ctx);
                 g.emitir(new Salto(lFin));
@@ -175,7 +175,7 @@ public sealed interface NodoSentencia extends NodoAST permits
             g.emitir(new DefinicionEtiqueta(lInicio));
 
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
-            g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "bool"), lRomper));
+            g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "numerus"), lRomper));
 
             g.entrarCiclo(new ContextoCiclo(lInicio, lRomper));
             for (NodoSentencia s : cuerpo) s.aCodigoIntermedio(ctx);
@@ -208,7 +208,7 @@ public sealed interface NodoSentencia extends NodoAST permits
             g.emitir(new DefinicionEtiqueta(lCondicion));
 
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
-            g.emitir(new Condicional1(condAcc, "!=", new LiteralPig(0, "bool"), lInicio));
+            g.emitir(new Condicional1(condAcc, "!=", new LiteralPig(0, "numerus"), lInicio));
 
             g.emitir(new DefinicionEtiqueta(lRomper));
         }
@@ -234,7 +234,7 @@ public sealed interface NodoSentencia extends NodoAST permits
 
             if (condicion != null) {
                 AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
-                g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "bool"), lRomper));
+                g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "numerus"), lRomper));
             }
 
             g.entrarCiclo(new ContextoCiclo(lContinuar, lRomper));
@@ -256,7 +256,6 @@ public sealed interface NodoSentencia extends NodoAST permits
         @Override
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             if (variable == null) {
-                // Leer sin guardar: temporal descartable
                 int idT = ctx.getGestor().getContador().siguienteTemporal("textum");
                 AccesoTemporal t = new AccesoTemporal(idT, "textum");
                 ctx.getGestor().emitir(new LeerPig(t, "textum"));
@@ -369,22 +368,4 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    private String tipoPigLatinDe(NodoExpr expr, ContextoTraduccionPig ctx) {
-        // Literales: ya sabemos su tipo PigLatin
-        if (expr instanceof NodoExpr.LiteralEntero) return "numerus";
-        if (expr instanceof NodoExpr.LiteralDecimal) return "decimalis";
-        if (expr instanceof NodoExpr.LiteralTexto) return "textum";
-        if (expr instanceof NodoExpr.LiteralCaracter) return "littera";
-        if (expr instanceof NodoExpr.LiteralBool) return "bool";
-
-        // Identificadores: consultar la tabla
-        if (expr instanceof NodoExpr.Identificador id) {
-            return ctx.getTabla().buscarVariable(id.nombre())
-                    .map(s -> s.tipo())
-                    .orElse("numerus");
-        }
-
-        // Otros casos: fallback a numerus
-        return "numerus";
-    }
 }
