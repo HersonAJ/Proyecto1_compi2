@@ -164,4 +164,9 @@ public class TablaSimbolosPig {
     public List<EntradaSimbolo> getRegistroCompleto() {
         return Collections.unmodifiableList(registro);
     }
+
+    // Devuelve true si el nombre ya está en uso por una estructura o una clase
+    public boolean nombreEnUso(String nombre) {
+        return estructuras.containsKey(nombre) || clases.containsKey(nombre);
+    }
 }

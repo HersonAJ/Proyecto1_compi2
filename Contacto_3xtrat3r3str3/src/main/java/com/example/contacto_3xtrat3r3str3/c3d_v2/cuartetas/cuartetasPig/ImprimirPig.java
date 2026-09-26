@@ -30,7 +30,8 @@ public class ImprimirPig extends Cuarteta {
             case "littera"   -> "%c";
             case "textum"    -> "%s";
             case "bool"      -> "%d";
-            default          -> "%d";   // numerus
+            case "numerus"   -> "%d";
+            default          -> "%p";
         };
     }
 

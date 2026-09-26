@@ -395,19 +395,6 @@ public sealed interface NodoExpr extends NodoAST permits
             // 3. Resolver el constructor.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
-
-            // DEBUG TEMPORAL
-            System.out.println("=== DEBUG InstanciaObjeto ===");
-            System.out.println("Clase: " + tipoClase);
-            System.out.println("Tipos args (pig): " + tiposArgs);
-            System.out.println("Constructores disponibles:");
-            for (var f : defClase.constructores()) {
-                List<String> tiposParams = new ArrayList<>();
-                for (var p : f.parametros()) tiposParams.add(p.tipo());
-                System.out.println("  - " + f.nombre() + " params=" + tiposParams);
-            }
-            System.out.println("========================");
-
             var firmaOpt = defClase.constructores().stream()
                     .filter(f -> tiposCompatibles(f.parametros(), tiposArgs))
                     .findFirst();

@@ -20,12 +20,8 @@ import java.util.List;
 
 public class ServicioCompilacionPig {
 
-    private static final boolean DEBUG = true;
 
     public ResultadoCompilacionPig analizar(String codigoFuente, Path carpetaRaiz) {
-        if (DEBUG) {
-            System.out.println("=== INICIO ANALISIS PIGLATIN ===");
-        }
 
         if (codigoFuente == null || codigoFuente.trim().isEmpty()) {
             return new ResultadoCompilacionPig(
@@ -46,7 +42,6 @@ public class ServicioCompilacionPig {
                     null, false, null
             );
         } catch (Exception e) {
-            if (DEBUG) e.printStackTrace();
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
@@ -121,7 +116,6 @@ public class ServicioCompilacionPig {
             NodoAST nodo = builder.visit(tree);
             programa = (nodo instanceof NodoPrograma np) ? np : null;
         } catch (Exception e) {
-            if (DEBUG) e.printStackTrace();
             return new ResultadoCompilacionPig(
                     false, null,
                     List.of(), List.of(), List.of(),
@@ -146,7 +140,6 @@ public class ServicioCompilacionPig {
             validador = new ValidadorSemanticoPig(carpetaRaiz);
             erroresSemanticos = validador.analizar(programa);
         } catch (Exception e) {
-            if (DEBUG) e.printStackTrace();
             return new ResultadoCompilacionPig(
                     false, programa,
                     List.of(), List.of(), List.of(),
@@ -174,20 +167,11 @@ public class ServicioCompilacionPig {
                             .toAbsolutePath().toString();
                 }
             } catch (Exception e) {
-                if (DEBUG) e.printStackTrace();
                 erroresSemanticos.add(new ErrorSemantico(
                         -1, -1, "Generación C",
                         "Error al generar/compilar el código C: " + e.getMessage()));
                 exitoso = false;
             }
-        }
-
-        if (DEBUG) {
-            System.out.println("Análisis completado. Exitoso: " + exitoso);
-            System.out.println("  Errores semánticos: " + erroresSemanticos.size());
-            System.out.println("  Código C: " + (codigoC != null ? codigoC.length() + " caracteres" : "no generado"));
-            System.out.println("  Compilación gcc: " + (compilacionOk ? "OK" : "falló"));
-            System.out.println("=== FIN ANALISIS PIGLATIN ===");
         }
 
         return new ResultadoCompilacionPig(

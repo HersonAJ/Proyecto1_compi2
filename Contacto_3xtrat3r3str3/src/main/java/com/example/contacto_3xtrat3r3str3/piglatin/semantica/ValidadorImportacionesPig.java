@@ -12,7 +12,6 @@ import com.example.contacto_3xtrat3r3str3.zetariano.service.ServicioCompilacionZ
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +33,7 @@ public class ValidadorImportacionesPig {
     private final List<ErrorSemantico> errores;
     private final Path carpetaRaiz;
 
-    // NUEVOS: código C generado de los imports
+    // codigo C generado de los imports
     private final List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC> funcionesImportadas = new ArrayList<>();
     private final List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.EstructuraC> estructurasImportadas = new ArrayList<>();
 
@@ -46,7 +45,6 @@ public class ValidadorImportacionesPig {
         this.carpetaRaiz = carpetaRaiz;
     }
 
-    // NUEVOS: getters
     public List<com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC> getFuncionesImportadas() {
         return funcionesImportadas;
     }
@@ -126,11 +124,28 @@ public class ValidadorImportacionesPig {
         if (resultado.getPrograma() != null) {
             for (NodoEstructura est : resultado.getPrograma().estructuras()) {
                 NodoEstructura.Estructura e = (NodoEstructura.Estructura) est;
+
+                // Verificar colisión con una clase ya importada
+                if (tabla.buscarClase(e.nombre()).isPresent()) {
+                    errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                            "Nombre en conflicto",
+                            "La estructura '" + e.nombre() + "' del archivo importado '" + ruta
+                                    + "' entra en conflicto con una clase ya importada con el mismo nombre"));
+                    return false;
+                }
+                // Verificar colisión con otra estructura ya importada
+                if (tabla.buscarEstructura(e.nombre()).isPresent()) {
+                    errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                            "Declaración duplicada",
+                            "La estructura '" + e.nombre() + "' ya fue declarada por otro archivo importado"));
+                    return false;
+                }
+
                 Map<String, String> atributos = new LinkedHashMap<>();
                 for (NodoAtributo a : e.atributos()) {
                     NodoAtributo.Atributo at = (NodoAtributo.Atributo) a;
                     String tipo = at.tipoPrimitivo() != null ? at.tipoPrimitivo() : at.tipoEstructura();
-                    atributos.put(at.nombre(), tipoYaPig(tipo));   // ← TRADUCIR
+                    atributos.put(at.nombre(), tipoYaPig(tipo));
                 }
                 tabla.declararEstructura(e.nombre(), atributos);
             }
@@ -142,19 +157,17 @@ public class ValidadorImportacionesPig {
                     NodoParametro.Parametro param = (NodoParametro.Parametro) p;
                     String tipo = param.tipoPrimitivo() != null ? param.tipoPrimitivo() : param.tipoEstructura();
                     params.add(new TablaSimbolosPig.Parametro(
-                            param.nombre(), tipoYaPig(tipo), param.esArreglo() ? 1 : 0));  // ← TRADUCIR
+                            param.nombre(), tipoYaPig(tipo), param.esArreglo() ? 1 : 0));
                 }
-                tabla.declararFuncion(fn.nombre(), params, tipoYaPig(fn.tipoRetorno()));  // ← TRADUCIR
+                tabla.declararFuncion(fn.nombre(), params, tipoYaPig(fn.tipoRetorno()));
             }
         }
 
-        // NUEVO: generar FuncionC y EstructuraC del .y importado
+        // generar FuncionC y EstructuraC del .y importado
         if (resultado.getPrograma() != null) {
             estructurasImportadas.addAll(resultado.getPrograma().aEstructurasC());
 
             var tablaY = resultado.getTablaSimbolos();
-            System.out.println("DEBUG importarY: tablaY=" + (resultado.getTablaSimbolos() != null)
-                    + " programa=" + (resultado.getPrograma() != null));
             if (tablaY != null) {
                 funcionesImportadas.addAll(resultado.getPrograma().aFuncionesC(tablaY));
             }
@@ -205,11 +218,27 @@ public class ValidadorImportacionesPig {
         if (resultado.getPrograma() != null) {
             NodoClase clase = resultado.getPrograma().clase();
 
+            // Verificar colisión con una estructura ya importada
+            if (tabla.buscarEstructura(clase.nombre()).isPresent()) {
+                errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                        "Nombre en conflicto",
+                        "La clase '" + clase.nombre() + "' del archivo importado '" + ruta
+                                + "' entra en conflicto con una estructura ya importada con el mismo nombre"));
+                return false;
+            }
+            // Verificar colisión con otra clase ya importada
+            if (tabla.buscarClase(clase.nombre()).isPresent()) {
+                errores.add(new ErrorSemantico(imp.linea(), imp.columna(),
+                        "Declaración duplicada",
+                        "La clase '" + clase.nombre() + "' ya fue declarada por otro archivo importado"));
+                return false;
+            }
+
             // Atributos
             Map<String, TablaSimbolosPig.AtributoClase> atributos = new LinkedHashMap<>();
             for (NodoAtributoZ a : clase.atributos()) {
                 atributos.put(a.nombre(), new TablaSimbolosPig.AtributoClase(
-                        a.nombre(), tipoZaPig(a.tipo()), 0));   // ← TRADUCIR
+                        a.nombre(), tipoZaPig(a.tipo()), 0));
             }
 
             // Constructores
@@ -218,7 +247,7 @@ public class ValidadorImportacionesPig {
                 List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
                 for (NodoParametroZ p : c.parametros()) {
                     params.add(new TablaSimbolosPig.Parametro(
-                            p.nombre(), tipoZaPig(p.tipo()), 0));   // ← TRADUCIR
+                            p.nombre(), tipoZaPig(p.tipo()), 0));
                 }
                 constructores.add(new TablaSimbolosPig.Firma(c.nombre(), params, null));
             }
@@ -229,21 +258,17 @@ public class ValidadorImportacionesPig {
                 List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
                 for (NodoParametroZ p : m.parametros()) {
                     params.add(new TablaSimbolosPig.Parametro(
-                            p.nombre(), tipoZaPig(p.tipo()), 0));   // ← TRADUCIR
+                            p.nombre(), tipoZaPig(p.tipo()), 0));
                 }
-                metodos.add(new TablaSimbolosPig.Firma(m.nombre(), params, tipoZaPig(m.tipoRetorno())));   // ← TRADUCIR
+                metodos.add(new TablaSimbolosPig.Firma(m.nombre(), params, tipoZaPig(m.tipoRetorno())));
             }
 
             TablaSimbolosPig.DefinicionClase def = new TablaSimbolosPig.DefinicionClase(
                     clase.nombre(), atributos, constructores, metodos);
             tabla.declararClase(def);
-
-            // NUEVO: generar FuncionC y EstructuraC del .z importado
             estructurasImportadas.add(clase.aEstructuraC());
 
             var tablaZ = resultado.getTablaSimbolos();
-            System.out.println("DEBUG importarZ: tablaZ=" + (resultado.getTablaSimbolos() != null)
-                    + " programa=" + (resultado.getPrograma() != null));
             if (tablaZ != null) {
                 funcionesImportadas.addAll(clase.aFuncionesC(tablaZ));
             }
@@ -263,11 +288,8 @@ public class ValidadorImportacionesPig {
         return sinExtension.replace(".", "/") + extension;
     }
 
-    // ============================================================
     // HELPERS DE TRADUCCIÓN DE TIPOS
-    // ============================================================
-
-    /** Traduce un tipo de .z a su equivalente en .pig. */
+    // Traduce un tipo de .z a su equivalente en .pig
     private static String tipoZaPig(String tipoZ) {
         if (tipoZ == null) return null;
         return switch (tipoZ) {
@@ -276,11 +298,11 @@ public class ValidadorImportacionesPig {
             case "char"    -> "littera";
             case "String"  -> "textum";
             case "boolean" -> "bool";
-            default        -> tipoZ;   // clases y structs se dejan igual
+            default        -> tipoZ;
         };
     }
 
-    /** Traduce un tipo de .y a su equivalente en .pig. */
+    // Traduce un tipo de .y a su equivalente en .pig
     private static String tipoYaPig(String tipoY) {
         if (tipoY == null) return null;
         return switch (tipoY) {

@@ -50,17 +50,6 @@ public class CompiladorPig {
         List<FuncionC> funcionesImportadas = importaciones.getFuncionesImportadas();
         List<EstructuraC> estructurasImportadas = importaciones.getEstructurasImportadas();
 
-        System.out.println("=== DEBUG CompiladorPig ===");
-        System.out.println("Funciones importadas: " + funcionesImportadas.size());
-        for (var f : funcionesImportadas) {
-            System.out.println("  - " + f.getNombre());
-        }
-        System.out.println("Estructuras importadas: " + estructurasImportadas.size());
-        for (var e : estructurasImportadas) {
-            System.out.println("  - " + e.getNombre());
-        }
-        System.out.println("============================");
-
         // 4. Variables globales y main del .pig
         List<ParametroC> variablesGlobales = programa.aVariablesGlobalesC(tabla);
         FuncionC mainC = programa.aMainC(tabla);
