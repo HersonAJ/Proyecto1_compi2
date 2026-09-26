@@ -149,9 +149,28 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
                     case NodoSentencia.DeclaracionMatriz d -> {
                         tabla.declararVariable(d.nombre(), d.tipo(),
                                 true, 2, false, null, List.of(d.filas(), d.columnas()));
-                        acumuladas.add(new VariableLocalC(
-                                TipoC.primitivoAC(d.tipo()),
-                                d.nombre() + "[" + d.filas() + "][" + d.columnas() + "]"));
+
+                        String tipoBaseC = TipoC.primitivoAC(d.tipo());
+                        String nombreConDim = d.nombre() + "[" + d.filas() + "][" + d.columnas() + "]";
+
+                        String inicializadorC = null;
+                        if (d.inicializacion() != null) {
+                            StringBuilder sb = new StringBuilder("{");
+                            for (int i = 0; i < d.inicializacion().size(); i++) {
+                                if (i > 0) sb.append(", ");
+                                sb.append("{");
+                                List<NodoExpr> fila = d.inicializacion().get(i);
+                                for (int j = 0; j < fila.size(); j++) {
+                                    if (j > 0) sb.append(", ");
+                                    sb.append(literalC(fila.get(j)));
+                                }
+                                sb.append("}");
+                            }
+                            sb.append("}");
+                            inicializadorC = sb.toString();
+                        }
+
+                        acumuladas.add(new VariableLocalC(tipoBaseC, nombreConDim, inicializadorC));
                     }
                     case NodoSentencia.DeclaracionEstructura d -> {
                         tabla.declararVariable(d.nombre(), d.tipoEstructura(),
@@ -261,4 +280,13 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
             }
             return new ParametroC(TipoC.primitivoAC(p.tipoPrimitivo()), p.nombre());
         }
+
+    private static String literalC(NodoExpr expr) {
+        if (expr instanceof NodoExpr.LiteralEntero l) return String.valueOf(l.valor());
+        if (expr instanceof NodoExpr.LiteralFlotante l) return String.valueOf(l.valor());
+        if (expr instanceof NodoExpr.LiteralCaracter l) return "'" + l.valor() + "'";
+        if (expr instanceof NodoExpr.LiteralCadena l) return "\"" + l.valor() + "\"";
+        if (expr instanceof NodoExpr.LiteralBool l) return l.valor() ? "1" : "0";
+        return "0";
+    }
     }

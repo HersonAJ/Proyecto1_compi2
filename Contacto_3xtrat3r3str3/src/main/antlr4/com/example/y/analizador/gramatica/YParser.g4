@@ -55,8 +55,11 @@ instruccion : declaracion
 //declaraciones
 declaracion : tipo ID (IGUAL expresion)? PUNTO_COMA? NEWLINE
             | tipo ID COR_IZQ ENTERO_LIT COR_DER (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? PUNTO_COMA? NEWLINE
-            | tipo ID COR_IZQ ENTERO_LIT COR_DER COR_IZQ ENTERO_LIT COR_DER PUNTO_COMA? NEWLINE
+            | tipo ID COR_IZQ ENTERO_LIT COR_DER COR_IZQ ENTERO_LIT COR_DER (IGUAL LLAVE_IZQ listaMatriz LLAVE_DER)? PUNTO_COMA? NEWLINE
             | ID ID (IGUAL LLAVE_IZQ listaExpresiones LLAVE_DER)? PUNTO_COMA? NEWLINE
+            ;
+
+listaMatriz : LLAVE_IZQ listaExpresiones LLAVE_DER (COMA LLAVE_IZQ listaExpresiones LLAVE_DER)*
             ;
 
 listaExpresiones    : expresion (COMA expresion)*

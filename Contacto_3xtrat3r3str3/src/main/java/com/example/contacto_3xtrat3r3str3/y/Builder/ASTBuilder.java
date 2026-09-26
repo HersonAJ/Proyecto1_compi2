@@ -234,12 +234,30 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         }
 
         //caso 3: tipo ID [ ENTERO_LIT ] [ ENTERO_LIT ] -> matriz, sin inicializador
+//caso 3: tipo ID [ ENTERO_LIT ] [ ENTERO_LIT ] -> matriz
         if (ctx.tipo() != null && ctx.COR_IZQ().size() == 2) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
             int filas = Integer.parseInt(ctx.ENTERO_LIT(0).getText());
             int columnas = Integer.parseInt(ctx.ENTERO_LIT(1).getText());
-            return new NodoSentencia.DeclaracionMatriz(linea(ctx), columna(ctx), tipo, nombre, filas, columnas);
+
+            List<List<NodoExpr>> inicializacion = null;
+            if (ctx.listaMatriz() != null) {
+                inicializacion = new ArrayList<>();
+                for (YParser.ListaExpresionesContext filaCtx : ctx.listaMatriz().listaExpresiones()) {
+                    List<NodoExpr> fila = new ArrayList<>();
+                    for (YParser.ExpresionContext e : filaCtx.expresion()) {
+                        NodoAST nodo = visit(e);
+                        if (nodo instanceof NodoExpr expr) {
+                            fila.add(expr);
+                        }
+                    }
+                    inicializacion.add(fila);
+                }
+            }
+
+            return new NodoSentencia.DeclaracionMatriz(linea(ctx), columna(ctx),
+                    tipo, nombre, filas, columnas, inicializacion);
         }
 
         //caso 4: ID ID (IGUAL { listaExpresiones })? -> instancia de estructura

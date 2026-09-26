@@ -104,55 +104,11 @@ public sealed interface NodoExpr extends NodoAST permits
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx) {
-            GestorCodigoIntermedio g = ctx.getGestor();
+            AccesoMemoria base = arreglo.aCodigoIntermedio(ctx);
+            AccesoMemoria indiceAcc = indice.aCodigoIntermedio(ctx);
 
-            // Caso 2D: el arreglo interno es también un AccesoArray
-            if (arreglo instanceof AccesoArray interno) {
-                return emitirAcceso2D(ctx, interno, indice);
-            }
-
-            // Caso 1D
-            return emitirAcceso1D(ctx, arreglo, indice);
-        }
-
-        private AccesoMemoria emitirAcceso1D(ContextoTraduccion ctx,
-                                             NodoExpr baseExpr,
-                                             NodoExpr indiceExpr) {
-            GestorCodigoIntermedio g = ctx.getGestor();
-
-            AccesoMemoria base = baseExpr.aCodigoIntermedio(ctx);
-            AccesoMemoria indiceAcc = indiceExpr.aCodigoIntermedio(ctx);
-            String tipoElemento = obtenerTipoElemento(ctx, baseExpr);
-
+            String tipoElemento = obtenerTipoElemento(ctx, arreglo);
             return new AccesoArreglo(base, indiceAcc, tipoElemento);
-        }
-
-        private AccesoMemoria emitirAcceso2D(ContextoTraduccion ctx,
-                                             AccesoArray interno,
-                                             NodoExpr indiceExterno) {
-            GestorCodigoIntermedio g = ctx.getGestor();
-
-            // Base real: el "arreglo" del interno (ej: Identificador("matriz")).
-            AccesoMemoria base = interno.arreglo().aCodigoIntermedio(ctx);
-
-            // Calcular i * cols + j
-            AccesoMemoria i = interno.indice().aCodigoIntermedio(ctx);
-            AccesoMemoria j = indiceExterno.aCodigoIntermedio(ctx);
-
-            int cols = obtenerColumnas(ctx, interno.arreglo());
-
-            // t1 = i * cols
-            int idProd = g.getContador().siguienteTemporal("entero");
-            AccesoTemporal tProd = new AccesoTemporal(idProd, "entero");
-            g.emitir(new OperacionBinaria(tProd, i, "*", new Literal(cols, "entero")));
-
-            // t2 = t1 + j
-            int idSum = g.getContador().siguienteTemporal("entero");
-            AccesoTemporal tSum = new AccesoTemporal(idSum, "entero");
-            g.emitir(new OperacionBinaria(tSum, tProd, "+", j));
-
-            String tipoElemento = obtenerTipoElemento(ctx, interno.arreglo());
-            return new AccesoArreglo(base, tSum, tipoElemento);
         }
 
         private String obtenerTipoElemento(ContextoTraduccion ctx, NodoExpr baseExpr) {
@@ -161,17 +117,10 @@ public sealed interface NodoExpr extends NodoAST permits
                         .map(s -> s.tipo())
                         .orElse("entero");
             }
-            return "entero"; // fallback defensivo
-        }
-
-        private int obtenerColumnas(ContextoTraduccion ctx, NodoExpr baseExpr) {
-            if (baseExpr instanceof Identificador id) {
-                return ctx.getTabla().buscarVariable(id.nombre())
-                        .filter(s -> s.tamanos().size() >= 2)
-                        .map(s -> s.tamanos().get(1))   // columnas = segunda dimensión
-                        .orElse(0);
+            if (baseExpr instanceof AccesoArray inner) {
+                return obtenerTipoElemento(ctx, inner.arreglo());
             }
-            return 0;
+            return "entero";
         }
     }
 

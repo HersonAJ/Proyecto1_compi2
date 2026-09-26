@@ -71,7 +71,7 @@ public class GeneradorC {
         List<String> tipos = f.getTiposTemporales();
         for (int i = 0; i < tipos.size(); i++) {
             String tipoTemp = tipos.get(i);
-            if ("cadena".equals(tipoTemp)) {
+            if ("cadena".equals(tipoTemp) || "textum".equals(tipoTemp)) {
                 sb.append("    char t").append(i).append("[256];\n");
             } else if (esTipoC(tipoTemp)) {
                 // El tipo ya viene en formato C (struct X*, int, double, char, etc.)

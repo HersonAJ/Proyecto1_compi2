@@ -2,21 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-int testEstructuraLocal(void);
+int testMatriz(void);
 
-struct Punto_testEstructuraLocal {
-    int x;
-    int y;
-};
+int testMatriz(void) {
+    int m[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 
-int testEstructuraLocal(void) {
-    struct Punto_testEstructuraLocal p;
-
-    int t0;
-
-    p.x = 10;
-    p.y = 20;
-    t0 = p.x + p.y;
-    return t0;
+    return m[0][0];
 }
 

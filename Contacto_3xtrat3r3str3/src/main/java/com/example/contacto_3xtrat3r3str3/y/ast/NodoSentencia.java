@@ -68,7 +68,8 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     record DeclaracionMatriz(int linea, int columna, String tipo, String nombre,
-                             int filas, int columnas) implements NodoSentencia {
+                             int filas, int columnas,
+                             List<List<NodoExpr>> inicializacion) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
             return TipoNodoSentencia.DECLARACION_MATRIZ;
@@ -76,7 +77,6 @@ public sealed interface NodoSentencia extends NodoAST permits
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccion ctx) {
-            // Sin inicialización en la gramática: solo reservar (ya está en tabla).
         }
     }
 
