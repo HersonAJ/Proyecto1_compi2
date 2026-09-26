@@ -521,16 +521,21 @@ public sealed interface NodoExpr extends NodoAST permits
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
 
-            if (dimensiones.size() != 1 || dimensiones.get(0) == null) {
-                throw new UnsupportedOperationException(
-                        "Solo se soportan arreglos 1D con tamaño explícito por ahora "
-                                + "(línea " + linea + ")");
+            // Contar dimensiones con tamaño explícito.
+            List<AccesoMemoria> tamanos = new ArrayList<>();
+            for (NodoExpr dim : dimensiones) {
+                if (dim == null) {
+                    throw new UnsupportedOperationException(
+                            "Dimensiones vacías ('new int[3][]') no soportadas (línea " + linea + ")");
+                }
+                tamanos.add(dim.aCodigoIntermedio(ctx));
             }
 
-            // 1. Evaluar el tamaño.
-            AccesoMemoria tamano = dimensiones.get(0).aCodigoIntermedio(ctx);
+            if (tamanos.isEmpty() || tamanos.size() > 2) {
+                throw new UnsupportedOperationException(
+                        "Solo arreglos 1D o 2D por ahora (línea " + linea + ")");
+            }
 
-            // 2. Tipo del elemento en C.
             String tipoElementoC;
             if (TipoCZ.esPrimitivo(tipoBase)) {
                 tipoElementoC = TipoCZ.baseValorAC(tipoBase);
@@ -538,13 +543,17 @@ public sealed interface NodoExpr extends NodoAST permits
                 tipoElementoC = "struct " + tipoBase;
             }
 
-            // 3. Temporal del tipo "TipoC*".
-            String tipoTemporal = tipoElementoC + "*";
+            // Tipo del temporal: un '*' por dimensión.
+            String tipoTemporal = tipoElementoC + "*".repeat(tamanos.size());
+
             int idT = g.getContador().siguienteTemporal(tipoTemporal);
             AccesoTemporal t = new AccesoTemporal(idT, tipoTemporal);
 
-            // 4. Emitir.
-            g.emitir(new NewArreglo(t, tipoElementoC, tamano));
+            if (tamanos.size() == 1) {
+                g.emitir(new NewArreglo(t, tipoElementoC, tamanos.get(0)));
+            } else {
+                g.emitir(new NewArregloMulti(t, tipoElementoC, tamanos));
+            }
             return t;
         }
     }

@@ -50,7 +50,7 @@ public record NodoMetodo(int linea, int columna, String nombre,
             List<String> tiposTemporales = gestor.getContador().getTiposTemporales();
 
             return new FuncionC(tipoRetornoC, nombreC, paramsC, locales,
-                    cuartetas, tiposTemporales);
+                    new ArrayList<>(), cuartetas, tiposTemporales);
         } finally {
             tabla.salirScope();
         }

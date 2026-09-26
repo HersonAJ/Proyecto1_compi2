@@ -27,36 +27,84 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
             GestorCodigoIntermedio gestor = new GestorCodigoIntermedio();
             ContextoTraduccion ctx = new ContextoTraduccion(gestor, tabla);
 
+            // 1. Recolectar estructuras locales y registrar alias.
+            List<EstructuraC> estructurasLocales = new ArrayList<>();
+            recogerEstructurasLocales(ctx, cuerpo, estructurasLocales);
+
             List<VariableLocalC> variablesLocales = new ArrayList<>();
 
             tabla.entrarScope(nombre);
             try {
                 declararParametrosEnScope(tabla);
-                recogerYDeclararVariablesLocales(tabla, cuerpo, variablesLocales);
+                recogerYDeclararVariablesLocales(ctx, tabla, cuerpo, variablesLocales);
 
                 for (NodoSentencia s : cuerpo) {
                     s.aCodigoIntermedio(ctx);
                 }
             } finally {
                 tabla.salirScope();
+                ctx.limpiarAliasEstructuras();
             }
 
             List<ParametroC> paramsC = new ArrayList<>();
             for (NodoParametro p : parametros) {
                 if (p instanceof NodoParametro.Parametro par) {
-                    paramsC.add(aParametroC(par));
+                    paramsC.add(aParametroC(ctx, par));
                 }
             }
 
-            String tipoRetornoC = (tipoRetorno == null) ? "void" : TipoC.primitivoAC(tipoRetorno);
+            String tipoRetornoC = (tipoRetorno == null)
+                    ? "void"
+                    : TipoC.primitivoAC(tipoRetorno);
             List<Cuarteta> cuartetas = gestor.getCuartetas();
             List<String> tiposTemporales = gestor.getContador().getTiposTemporales();
 
             return new FuncionC(tipoRetornoC, nombre, paramsC, variablesLocales,
-                    cuartetas, tiposTemporales);
+                    estructurasLocales, cuartetas, tiposTemporales);
         }
 
-        // Declaración en la tabla de símbolos + recolección para C
+        // ============================================================
+        // Estructuras locales
+        // ============================================================
+
+        private void recogerEstructurasLocales(ContextoTraduccion ctx,
+                                               List<NodoSentencia> sentencias,
+                                               List<EstructuraC> acumuladas) {
+            for (NodoSentencia s : sentencias) {
+                if (s instanceof NodoSentencia.DeclaracionEstructuraLocal d) {
+                    NodoEstructura.Estructura est = d.estructura();
+                    String nombreY = est.nombre();
+                    String nombreC = nombreY + "_" + nombre;   // "Punto_test"
+
+                    ctx.registrarAliasEstructura(nombreY, nombreC);
+
+                    List<ParametroC> campos = new ArrayList<>();
+                    for (NodoAtributo a : est.atributos()) {
+                        if (a instanceof NodoAtributo.Atributo attr) {
+                            String tipoC;
+                            if (attr.tipoEstructura() != null) {
+                                // Referencia a otra estructura: resolver alias si existe.
+                                tipoC = "struct " + ctx.nombreEstructuraC(attr.tipoEstructura());
+                            } else {
+                                tipoC = TipoC.primitivoAC(attr.tipoPrimitivo());
+                            }
+                            if (attr.tamanoArreglo() > 0) {
+                                campos.add(new ParametroC(tipoC,
+                                        attr.nombre() + "[" + attr.tamanoArreglo() + "]"));
+                            } else {
+                                campos.add(new ParametroC(tipoC, attr.nombre()));
+                            }
+                        }
+                    }
+                    acumuladas.add(new EstructuraC(nombreC, campos));
+                }
+            }
+        }
+
+        // ============================================================
+        // Declaración en la tabla de símbolos
+        // ============================================================
+
         private void declararParametrosEnScope(TablaSimbolos tabla) {
             for (NodoParametro p : parametros) {
                 if (p instanceof NodoParametro.Parametro par) {
@@ -73,15 +121,23 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
             }
         }
 
-        private void recogerYDeclararVariablesLocales(TablaSimbolos tabla,
+        private void recogerYDeclararVariablesLocales(ContextoTraduccion ctx,
+                                                      TablaSimbolos tabla,
                                                       List<NodoSentencia> sentencias,
                                                       List<VariableLocalC> acumuladas) {
             for (NodoSentencia s : sentencias) {
                 switch (s) {
                     case NodoSentencia.DeclaracionVariable d -> {
                         tabla.declararVariable(d.nombre(), d.tipo());
-                        acumuladas.add(new VariableLocalC(
-                                TipoC.primitivoAC(d.tipo()), d.nombre()));
+                        if (d.tipo() != null) {
+                            String tipoC;
+                            if (esPrimitivoY(d.tipo())) {
+                                tipoC = TipoC.primitivoAC(d.tipo());
+                            } else {
+                                tipoC = "struct " + ctx.nombreEstructuraC(d.tipo());
+                            }
+                            acumuladas.add(new VariableLocalC(tipoC, d.nombre()));
+                        }
                     }
                     case NodoSentencia.DeclaracionArreglo d -> {
                         tabla.declararVariable(d.nombre(), d.tipo(),
@@ -100,31 +156,33 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
                     case NodoSentencia.DeclaracionEstructura d -> {
                         tabla.declararVariable(d.nombre(), d.tipoEstructura(),
                                 false, 0, true, d.tipoEstructura(), List.of());
-                        acumuladas.add(new VariableLocalC("struct " + d.tipoEstructura(), d.nombre()));
+                        acumuladas.add(new VariableLocalC(
+                                "struct " + ctx.nombreEstructuraC(d.tipoEstructura()),
+                                d.nombre()));
                     }
                     case NodoSentencia.Condicional c -> {
-                        recogerYDeclararVariablesLocales(tabla, c.cuerpoSi(), acumuladas);
+                        recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpoSi(), acumuladas);
                         if (c.cuerpoSino() != null)
-                            recogerYDeclararVariablesLocales(tabla, c.cuerpoSino(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpoSino(), acumuladas);
                         if (c.cuerpoContrario() != null)
-                            recogerYDeclararVariablesLocales(tabla, c.cuerpoContrario(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpoContrario(), acumuladas);
                     }
                     case NodoSentencia.CicloPara c -> {
                         tabla.declararVariable(c.nombreVariable(), c.tipoInicializacion());
                         acumuladas.add(new VariableLocalC(
                                 TipoC.primitivoAC(c.tipoInicializacion()), c.nombreVariable()));
-                        recogerYDeclararVariablesLocales(tabla, c.cuerpo(), acumuladas);
+                        recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpo(), acumuladas);
                     }
                     case NodoSentencia.CicloMientras c ->
-                            recogerYDeclararVariablesLocales(tabla, c.cuerpo(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpo(), acumuladas);
                     case NodoSentencia.CicloHacerMientras c ->
-                            recogerYDeclararVariablesLocales(tabla, c.cuerpo(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, c.cuerpo(), acumuladas);
                     case NodoSentencia.Elegir e -> {
                         for (NodoSentencia.CasoElegir caso : e.casos()) {
-                            recogerYDeclararVariablesLocales(tabla, caso.cuerpo(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, caso.cuerpo(), acumuladas);
                         }
                         if (e.siempre() != null) {
-                            recogerYDeclararVariablesLocales(tabla, e.siempre().cuerpo(), acumuladas);
+                            recogerYDeclararVariablesLocales(ctx, tabla, e.siempre().cuerpo(), acumuladas);
                         }
                     }
                     default -> { }
@@ -132,9 +190,17 @@ public sealed interface NodoFuncion extends NodoAST permits NodoFuncion.Funcion 
             }
         }
 
-        private static ParametroC aParametroC(NodoParametro.Parametro p) {
+        private static boolean esPrimitivoY(String tipo) {
+            return "entero".equals(tipo) || "flotante".equals(tipo)
+                    || "caracter".equals(tipo) || "cadena".equals(tipo)
+                    || "bool".equals(tipo);
+        }
+
+        private static ParametroC aParametroC(ContextoTraduccion ctx, NodoParametro.Parametro p) {
             if (p.esEstructura()) {
-                return new ParametroC(p.tipoEstructura() + "*", p.nombre());
+                return new ParametroC(
+                        "struct " + ctx.nombreEstructuraC(p.tipoEstructura()) + "*",
+                        p.nombre());
             }
             if (p.esArreglo()) {
                 return new ParametroC(TipoC.primitivoAC(p.tipoPrimitivo()) + "*", p.nombre());

@@ -51,6 +51,10 @@ public class GeneradorC {
     }
 
     private void escribirFuncion(FuncionC f) {
+        // Structs locales (renombrados) van antes de la función.
+        for (EstructuraC e : f.getEstructurasLocales()) {
+            e.aCodigoC(sb);
+        }
         f.escribirCabecera(sb);
         sb.append(" {\n");
 

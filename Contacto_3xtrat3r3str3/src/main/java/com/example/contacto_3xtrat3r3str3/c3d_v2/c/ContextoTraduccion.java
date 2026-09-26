@@ -1,23 +1,21 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.c;
 
-
 import com.example.contacto_3xtrat3r3str3.c3d_v2.GestorCodigoIntermedio;
 import com.example.contacto_3xtrat3r3str3.y.semantica.TablaSimbolos;
 
-/**
- * Agrupa todo lo que un nodo del AST necesita para traducirse:
- *   - el buffer de cuádruplas + contador + pila de ciclos
- *   - la tabla de símbolos para consultar tipos
- *   - (futuro) info de la función actual, structs definidos, etc.
- */
+import java.util.HashMap;
+import java.util.Map;
+
 public class ContextoTraduccion {
 
     private final GestorCodigoIntermedio gestor;
     private final TablaSimbolos tabla;
 
-    // Tipo de retorno de la función actual (null si void).
-    // Lo usará Retorno.toIntermediateCode para validaciones tardías.
     private String tipoRetornoFuncionActual;
+
+    // Alias de estructuras locales: nombre en .y -> nombre único en C.
+    // Ej: "Punto" -> "Punto_test" cuando se declara dentro de la función 'test'.
+    private final Map<String, String> aliasEstructuras = new HashMap<>();
 
     public ContextoTraduccion(GestorCodigoIntermedio gestor, TablaSimbolos tabla) {
         this.gestor = gestor;
@@ -33,5 +31,19 @@ public class ContextoTraduccion {
 
     public void setTipoRetornoFuncionActual(String tipoRetornoFuncionActual) {
         this.tipoRetornoFuncionActual = tipoRetornoFuncionActual;
+    }
+
+    // ===== Alias de estructuras =====
+
+    public String nombreEstructuraC(String nombreY) {
+        return aliasEstructuras.getOrDefault(nombreY, nombreY);
+    }
+
+    public void registrarAliasEstructura(String nombreY, String nombreC) {
+        aliasEstructuras.put(nombreY, nombreC);
+    }
+
+    public void limpiarAliasEstructuras() {
+        aliasEstructuras.clear();
     }
 }

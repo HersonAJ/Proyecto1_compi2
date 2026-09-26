@@ -19,17 +19,20 @@ public class FuncionC {
     private final List<VariableLocalC> variablesLocales;   // NUEVO
     private final List<Cuarteta> cuartetas;
     private final List<String> tiposTemporales;
+    private final List<EstructuraC> estructurasLocales;
 
     public FuncionC(String tipoRetornoC,
                     String nombre,
                     List<ParametroC> parametros,
-                    List<VariableLocalC> variablesLocales,   // NUEVO
+                    List<VariableLocalC> variablesLocales,
+                    List<EstructuraC> estructurasLocales,
                     List<Cuarteta> cuartetas,
                     List<String> tiposTemporales) {
         this.tipoRetornoC = tipoRetornoC;
         this.nombre = nombre;
         this.parametros = parametros;
         this.variablesLocales = variablesLocales;
+        this.estructurasLocales = estructurasLocales != null ? estructurasLocales : new java.util.ArrayList<>();
         this.cuartetas = cuartetas;
         this.tiposTemporales = tiposTemporales;
     }
@@ -53,4 +56,6 @@ public class FuncionC {
         }
         sb.append(')');
     }
+
+    public List<EstructuraC> getEstructurasLocales() { return estructurasLocales; }
 }

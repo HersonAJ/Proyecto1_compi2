@@ -58,7 +58,7 @@ public record NodoConstructor(int linea, int columna, String nombre,
             List<String> tiposTemporales = gestor.getContador().getTiposTemporales();
 
             return new FuncionC("void", nombreC, paramsC, locales,
-                    cuartetas, tiposTemporales);
+                    new ArrayList<>(), cuartetas, tiposTemporales);
         } finally {
             tabla.salirScope();
         }
