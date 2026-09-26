@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.c;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.GestorCodigoIntermedio;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.GestorCodigoIntermedio;
 import com.example.contacto_3xtrat3r3str3.y.semantica.TablaSimbolos;
 
 import java.util.HashMap;

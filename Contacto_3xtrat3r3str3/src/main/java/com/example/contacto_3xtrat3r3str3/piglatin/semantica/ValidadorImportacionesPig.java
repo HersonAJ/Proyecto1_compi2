@@ -122,7 +122,7 @@ public class ValidadorImportacionesPig {
             return false;
         }
 
-        // Cargar estructuras y funciones en la tabla
+        // Cargar estructuras y funciones en la tabla (con tipos traducidos a .pig)
         if (resultado.getPrograma() != null) {
             for (NodoEstructura est : resultado.getPrograma().estructuras()) {
                 NodoEstructura.Estructura e = (NodoEstructura.Estructura) est;
@@ -130,7 +130,7 @@ public class ValidadorImportacionesPig {
                 for (NodoAtributo a : e.atributos()) {
                     NodoAtributo.Atributo at = (NodoAtributo.Atributo) a;
                     String tipo = at.tipoPrimitivo() != null ? at.tipoPrimitivo() : at.tipoEstructura();
-                    atributos.put(at.nombre(), tipo);
+                    atributos.put(at.nombre(), tipoYaPig(tipo));   // ← TRADUCIR
                 }
                 tabla.declararEstructura(e.nombre(), atributos);
             }
@@ -142,9 +142,9 @@ public class ValidadorImportacionesPig {
                     NodoParametro.Parametro param = (NodoParametro.Parametro) p;
                     String tipo = param.tipoPrimitivo() != null ? param.tipoPrimitivo() : param.tipoEstructura();
                     params.add(new TablaSimbolosPig.Parametro(
-                            param.nombre(), tipo, param.esArreglo() ? 1 : 0));
+                            param.nombre(), tipoYaPig(tipo), param.esArreglo() ? 1 : 0));  // ← TRADUCIR
                 }
-                tabla.declararFuncion(fn.nombre(), params, fn.tipoRetorno());
+                tabla.declararFuncion(fn.nombre(), params, tipoYaPig(fn.tipoRetorno()));  // ← TRADUCIR
             }
         }
 
@@ -153,6 +153,8 @@ public class ValidadorImportacionesPig {
             estructurasImportadas.addAll(resultado.getPrograma().aEstructurasC());
 
             var tablaY = resultado.getTablaSimbolos();
+            System.out.println("DEBUG importarY: tablaY=" + (resultado.getTablaSimbolos() != null)
+                    + " programa=" + (resultado.getPrograma() != null));
             if (tablaY != null) {
                 funcionesImportadas.addAll(resultado.getPrograma().aFuncionesC(tablaY));
             }
@@ -199,7 +201,7 @@ public class ValidadorImportacionesPig {
             return false;
         }
 
-        // Cargar la clase en la tabla
+        // Cargar la clase en la tabla (con tipos traducidos a .pig)
         if (resultado.getPrograma() != null) {
             NodoClase clase = resultado.getPrograma().clase();
 
@@ -207,7 +209,7 @@ public class ValidadorImportacionesPig {
             Map<String, TablaSimbolosPig.AtributoClase> atributos = new LinkedHashMap<>();
             for (NodoAtributoZ a : clase.atributos()) {
                 atributos.put(a.nombre(), new TablaSimbolosPig.AtributoClase(
-                        a.nombre(), a.tipo(), 0));
+                        a.nombre(), tipoZaPig(a.tipo()), 0));   // ← TRADUCIR
             }
 
             // Constructores
@@ -215,7 +217,8 @@ public class ValidadorImportacionesPig {
             for (NodoConstructor c : clase.constructores()) {
                 List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
                 for (NodoParametroZ p : c.parametros()) {
-                    params.add(new TablaSimbolosPig.Parametro(p.nombre(), p.tipo(), 0));
+                    params.add(new TablaSimbolosPig.Parametro(
+                            p.nombre(), tipoZaPig(p.tipo()), 0));   // ← TRADUCIR
                 }
                 constructores.add(new TablaSimbolosPig.Firma(c.nombre(), params, null));
             }
@@ -225,9 +228,10 @@ public class ValidadorImportacionesPig {
             for (NodoMetodo m : clase.metodos()) {
                 List<TablaSimbolosPig.Parametro> params = new ArrayList<>();
                 for (NodoParametroZ p : m.parametros()) {
-                    params.add(new TablaSimbolosPig.Parametro(p.nombre(), p.tipo(), 0));
+                    params.add(new TablaSimbolosPig.Parametro(
+                            p.nombre(), tipoZaPig(p.tipo()), 0));   // ← TRADUCIR
                 }
-                metodos.add(new TablaSimbolosPig.Firma(m.nombre(), params, m.tipoRetorno()));
+                metodos.add(new TablaSimbolosPig.Firma(m.nombre(), params, tipoZaPig(m.tipoRetorno())));   // ← TRADUCIR
             }
 
             TablaSimbolosPig.DefinicionClase def = new TablaSimbolosPig.DefinicionClase(
@@ -238,6 +242,8 @@ public class ValidadorImportacionesPig {
             estructurasImportadas.add(clase.aEstructuraC());
 
             var tablaZ = resultado.getTablaSimbolos();
+            System.out.println("DEBUG importarZ: tablaZ=" + (resultado.getTablaSimbolos() != null)
+                    + " programa=" + (resultado.getPrograma() != null));
             if (tablaZ != null) {
                 funcionesImportadas.addAll(clase.aFuncionesC(tablaZ));
             }
@@ -255,5 +261,35 @@ public class ValidadorImportacionesPig {
         String extension = ruta.substring(ultimoPunto);
 
         return sinExtension.replace(".", "/") + extension;
+    }
+
+    // ============================================================
+    // HELPERS DE TRADUCCIÓN DE TIPOS
+    // ============================================================
+
+    /** Traduce un tipo de .z a su equivalente en .pig. */
+    private static String tipoZaPig(String tipoZ) {
+        if (tipoZ == null) return null;
+        return switch (tipoZ) {
+            case "int"     -> "numerus";
+            case "double"  -> "decimalis";
+            case "char"    -> "littera";
+            case "String"  -> "textum";
+            case "boolean" -> "bool";
+            default        -> tipoZ;   // clases y structs se dejan igual
+        };
+    }
+
+    /** Traduce un tipo de .y a su equivalente en .pig. */
+    private static String tipoYaPig(String tipoY) {
+        if (tipoY == null) return null;
+        return switch (tipoY) {
+            case "entero"   -> "numerus";
+            case "flotante" -> "decimalis";
+            case "caracter" -> "littera";
+            case "cadena"   -> "textum";
+            case "bool"     -> "bool";
+            default         -> tipoY;
+        };
     }
 }

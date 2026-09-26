@@ -194,7 +194,7 @@ public class ServicioCompilacionY {
         }
 
         // 6. RESULTADO
-        TablaSimbolos tabla = null;
+        TablaSimbolos tabla = validador.getTabla();
         boolean exitoso = erroresSemanticos.isEmpty();
 
         if (DEBUG) {
@@ -208,7 +208,7 @@ public class ServicioCompilacionY {
                 exitoso,
                 programa,
                 codigoPreprocesado,
-                tabla,
+                tabla,                     // ← ahora ya no es null
                 List.of(),
                 List.of(),
                 erroresSemanticos,

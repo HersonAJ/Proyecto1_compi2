@@ -136,14 +136,14 @@ public class ServicioCompilacionZ {
         }
 
         // 5. RESULTADO
-        TablaSimbolosZ tabla = null;
+        TablaSimbolosZ tabla = validador.getTabla();
         boolean exitoso = erroresSemanticos.isEmpty();
 
         return new ResultadoCompilacionZ(
                 exitoso,
                 programa,
                 codigoFuente,
-                tabla,
+                tabla,                     // ← ahora ya no es null
                 List.of(),
                 List.of(),
                 erroresSemanticos,

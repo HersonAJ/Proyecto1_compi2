@@ -32,13 +32,18 @@ public record NodoClase(
     }
 
     public List<FuncionC> aFuncionesC(TablaSimbolosZ tabla) {
+        System.out.println("DEBUG aFuncionesC (Z) llamado. Constructores: " + constructores.size()
+                + " Métodos: " + metodos.size());
         List<FuncionC> funciones = new ArrayList<>();
         for (NodoConstructor c : constructores) {
+            System.out.println("DEBUG aFuncionesC (Z) constructor: " + c.nombre());
             funciones.add(c.aFuncionC(tabla, nombre));
         }
         for (NodoMetodo m : metodos) {
+            System.out.println("DEBUG aFuncionesC (Z) método: " + m.nombre());
             funciones.add(m.aFuncionC(tabla, nombre));
         }
+        System.out.println("DEBUG aFuncionesC (Z) resultado: " + funciones.size());
         return funciones;
     }
 }

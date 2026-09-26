@@ -1,7 +1,13 @@
 package com.example.contacto_3xtrat3r3str3.zetariano.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Continuar1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Romper1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.ImprimirZ;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.LiteralZ;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.RomperSwitch;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.Switch1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 
 import java.util.ArrayList;
 import java.util.List;

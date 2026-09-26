@@ -1,12 +1,12 @@
 package com.example.contacto_3xtrat3r3str3.piglatin.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.ParametroC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.VariableLocalC;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.ContextoTraduccionPig;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.LiteralPig;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.TipoPigC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.ContextoTraduccionPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.LiteralPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.TipoPigC;
 import com.example.contacto_3xtrat3r3str3.piglatin.semantica.TablaSimbolosPig;
 
 import java.util.ArrayList;
@@ -28,10 +28,15 @@ public record NodoPrograma(int linea, int columna,
                 case NodoSentencia.DeclaracionVariable d -> {
                     if (yaDeclarados.contains(d.nombre())) continue;
                     yaDeclarados.add(d.nombre());
-                    tabla.declararVariable(d.nombre(), d.tipo(), 0, null, false, false, d.tipo());
-                    acumuladas.add(new VariableLocalC(
-                            TipoPigC.baseAC(d.tipo(), false),
-                            d.nombre()));
+
+                    boolean esObjeto = d.tipo() != null
+                            && tabla.buscarClase(d.tipo()).isPresent();
+
+                    tabla.declararVariable(d.nombre(), d.tipo(), 0, null,
+                            !TipoPigC.esPrimitivo(d.tipo()), esObjeto, d.tipo());
+
+                    String tipoC = TipoPigC.baseAC(d.tipo(), esObjeto);
+                    acumuladas.add(new VariableLocalC(tipoC, d.nombre()));
                 }
                 case NodoSentencia.DeclaracionArreglo d -> {
                     if (yaDeclarados.contains(d.nombre())) continue;
@@ -66,9 +71,14 @@ public record NodoPrograma(int linea, int columna,
                     if (c.inicializacion() instanceof NodoSentencia.DeclaracionVariable d) {
                         if (!yaDeclarados.contains(d.nombre())) {
                             yaDeclarados.add(d.nombre());
-                            tabla.declararVariable(d.nombre(), d.tipo(), 0, null, false, false, d.tipo());
+
+                            boolean esObjeto = d.tipo() != null
+                                    && tabla.buscarClase(d.tipo()).isPresent();
+
+                            tabla.declararVariable(d.nombre(), d.tipo(), 0, null,
+                                    !TipoPigC.esPrimitivo(d.tipo()), esObjeto, d.tipo());
                             acumuladas.add(new VariableLocalC(
-                                    TipoPigC.baseAC(d.tipo(), false),
+                                    TipoPigC.baseAC(d.tipo(), esObjeto),
                                     d.nombre()));
                         }
                     }
@@ -89,17 +99,20 @@ public record NodoPrograma(int linea, int columna,
                 case NodoSentencia.DeclaracionVariable d -> {
                     if (yaDeclarados.contains(d.nombre())) continue;
                     yaDeclarados.add(d.nombre());
-                    tabla.declararVariable(d.nombre(), d.tipo(), 0, null, false, false, d.tipo());
 
-                    String tipoC = TipoPigC.baseAC(d.tipo(), false);
+                    boolean esObjeto = d.tipo() != null
+                            && tabla.buscarClase(d.tipo()).isPresent();
+
+                    tabla.declararVariable(d.nombre(), d.tipo(), 0, null,
+                            !TipoPigC.esPrimitivo(d.tipo()), esObjeto, d.tipo());
+
+                    String tipoC = TipoPigC.baseAC(d.tipo(), esObjeto);
                     if (d.inicializacion() == null) {
                         resultado.add(new ParametroC(tipoC, d.nombre()));
                     } else if (esLiteralConstante(d.inicializacion())) {
-                        // Inicialización directa
                         String literal = literalC(d.inicializacion());
                         resultado.add(new ParametroC(tipoC, d.nombre() + " = " + literal));
                     } else {
-                        // Se inicializa en el main (se emite en otro lado)
                         resultado.add(new ParametroC(tipoC, d.nombre()));
                     }
                 }
@@ -158,7 +171,11 @@ public record NodoPrograma(int linea, int columna,
                     && !esLiteralConstante(d.inicializacion())) {
                 // Inicializar aquí
                 AccesoMemoria valor = d.inicializacion().aCodigoIntermedio(ctx);
-                String tipoC = TipoPigC.baseAC(d.tipo(), false);
+
+                boolean esObjeto = d.tipo() != null
+                        && tabla.buscarClase(d.tipo()).isPresent();
+                String tipoC = TipoPigC.baseAC(d.tipo(), esObjeto);
+
                 AccesoVariable destino = new AccesoVariable(d.nombre(), tipoC);
                 gestor.emitir(new AsignacionVariable(destino, valor));
             }

@@ -1,12 +1,13 @@
 package com.example.contacto_3xtrat3r3str3.piglatin.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.LlamadaMetodo1;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.NewObjeto;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.ContextoTraduccionPig;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.LiteralPig;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.PromocionTiposPig;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.TipoPigC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.LlamadaMetodo1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.NewObjeto;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.AccesoAtributo1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.ContextoTraduccionPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.LiteralPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.PromocionTiposPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.TipoPigC;
 import com.example.contacto_3xtrat3r3str3.piglatin.semantica.TablaSimbolosPig;
 
 import java.util.ArrayList;
@@ -364,7 +365,7 @@ public sealed interface NodoExpr extends NodoAST permits
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append('_').append(metodo);
             for (TablaSimbolosPig.Parametro p : firma.parametros()) {
-                sb.append('_').append(p.tipo());
+                sb.append('_').append(tipoPigAZ(p.tipo()));   // ← TRADUCIR
             }
             return sb.toString();
         }
@@ -372,6 +373,7 @@ public sealed interface NodoExpr extends NodoAST permits
 
     record InstanciaObjeto(int linea, int columna, String tipoClase, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INSTANCIA_OBJETO; }
+
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
@@ -393,6 +395,18 @@ public sealed interface NodoExpr extends NodoAST permits
             // 3. Resolver el constructor.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
+
+            // DEBUG TEMPORAL
+            System.out.println("=== DEBUG InstanciaObjeto ===");
+            System.out.println("Clase: " + tipoClase);
+            System.out.println("Tipos args (pig): " + tiposArgs);
+            System.out.println("Constructores disponibles:");
+            for (var f : defClase.constructores()) {
+                List<String> tiposParams = new ArrayList<>();
+                for (var p : f.parametros()) tiposParams.add(p.tipo());
+                System.out.println("  - " + f.nombre() + " params=" + tiposParams);
+            }
+            System.out.println("========================");
 
             var firmaOpt = defClase.constructores().stream()
                     .filter(f -> tiposCompatibles(f.parametros(), tiposArgs))
@@ -421,9 +435,20 @@ public sealed interface NodoExpr extends NodoAST permits
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append("_constructor");
             for (TablaSimbolosPig.Parametro p : firma.parametros()) {
-                sb.append('_').append(p.tipo());
+                sb.append('_').append(tipoPigAZ(p.tipo()));
             }
             return sb.toString();
+        }
+
+        private static String tipoPigAZ(String tipoPig) {
+            return switch (tipoPig) {
+                case "numerus"   -> "int";
+                case "decimalis" -> "double";
+                case "littera"   -> "char";
+                case "textum"    -> "String";
+                case "bool"      -> "boolean";
+                default          -> tipoPig;
+            };
         }
     }
 
@@ -435,7 +460,7 @@ public sealed interface NodoExpr extends NodoAST permits
             case "caracter" -> "littera";
             case "cadena"   -> "textum";
             case "bool"     -> "bool";
-            default         -> tipoY;   // structs y otros se dejan igual
+            default         -> tipoY;
         };
     }
 
@@ -446,5 +471,16 @@ public sealed interface NodoExpr extends NodoAST permits
             if (!params.get(i).tipo().equals(tiposArgs.get(i))) return false;
         }
         return true;
+    }
+
+    private static String tipoPigAZ(String tipoPig) {
+        return switch (tipoPig) {
+            case "numerus"   -> "int";
+            case "decimalis" -> "double";
+            case "littera"   -> "char";
+            case "textum"    -> "String";
+            case "bool"      -> "boolean";
+            default          -> tipoPig;   
+        };
     }
 }

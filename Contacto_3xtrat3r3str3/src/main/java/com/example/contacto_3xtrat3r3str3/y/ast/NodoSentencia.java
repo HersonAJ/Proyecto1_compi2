@@ -1,8 +1,9 @@
 package com.example.contacto_3xtrat3r3str3.y.ast;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.ContextoTraduccion;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.TipoC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 
 import java.util.List;
 

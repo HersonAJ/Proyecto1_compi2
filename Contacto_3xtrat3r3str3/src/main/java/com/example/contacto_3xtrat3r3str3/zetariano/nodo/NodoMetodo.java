@@ -1,11 +1,12 @@
 package com.example.contacto_3xtrat3r3str3.zetariano.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.GestorCodigoIntermedio;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.GestorCodigoIntermedio;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.FuncionC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.ParametroC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.VariableLocalC;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.ContextoTraduccionZ;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.TipoCZ;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 import com.example.contacto_3xtrat3r3str3.zetariano.semantica.TablaSimbolosZ;
 
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public record NodoMetodo(int linea, int columna, String nombre,
                     ? "void"
                     : tipoRetornoC(tipoRetorno);
 
-            List<com.example.contacto_3xtrat3r3str3.c3d_v2.Cuarteta> cuartetas =
+            List<Cuarteta> cuartetas =
                     gestor.getCuartetas();
             List<String> tiposTemporales = gestor.getContador().getTiposTemporales();
 

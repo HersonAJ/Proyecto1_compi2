@@ -1,13 +1,13 @@
 package com.example.contacto_3xtrat3r3str3.y.ast;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.ContextoTraduccion;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.TipoC;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.AccesoTemporal;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.PromocionTipos;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.OperacionBinaria;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.ConversionTipo;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.AccesoAtributo1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.PromocionTipos;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.OperacionBinaria;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.ConversionTipo;
 
 import java.util.List;
 
@@ -308,7 +308,7 @@ public sealed interface NodoExpr extends NodoAST permits
             AccesoTemporal t = new AccesoTemporal(idT, "cadena");
 
             // Emitimos la cuádrupla Leer apuntando al temporal.
-            g.emitir(new com.example.contacto_3xtrat3r3str3.c3d_v2.Leer(t, "cadena"));
+            g.emitir(new com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Leer(t, "cadena"));
 
             return t;
         }

@@ -1,7 +1,14 @@
 package com.example.contacto_3xtrat3r3str3.piglatin.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
-import com.example.contacto_3xtrat3r3str3.c3d_v2.pig.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.ContextoTraduccionPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.TipoPigC;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.ImprimirPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.LeerPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.LiteralPig;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.AsignacionAtributo;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Continuar1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Romper1;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -293,7 +300,34 @@ public sealed interface NodoSentencia extends NodoAST permits
                         .orElse("numerus");
             }
 
-            return "numerus"; // fallback
+            if (expr instanceof NodoExpr.LlamadaFuncion llamada) {
+                return ctx.getTabla().buscarFuncion(llamada.nombre())
+                        .map(f -> f.tipoRetorno())
+                        .orElse("numerus");
+            }
+
+            if (expr instanceof NodoExpr.LlamadaMetodo llamada) {
+                try {
+                    if (llamada.objeto() instanceof NodoExpr.Identificador id) {
+                        var v = ctx.getTabla().buscarVariable(id.nombre());
+                        if (v.isPresent() && v.get().esObjeto()) {
+                            var clase = ctx.getTabla().buscarClase(v.get().tipo());
+                            if (clase.isPresent()) {
+                                for (var m : clase.get().metodos()) {
+                                    if (m.nombre().equals(llamada.nombre())) {
+                                        return m.tipoRetorno() != null ? m.tipoRetorno() : "numerus";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // ignorar
+                }
+                return "numerus";
+            }
+
+            return "numerus";
         }
     }
 

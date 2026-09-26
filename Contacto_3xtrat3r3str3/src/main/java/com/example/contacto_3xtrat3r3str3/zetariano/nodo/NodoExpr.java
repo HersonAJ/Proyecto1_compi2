@@ -1,7 +1,8 @@
 package com.example.contacto_3xtrat3r3str3.zetariano.nodo;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.*;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 import com.example.contacto_3xtrat3r3str3.zetariano.semantica.TablaSimbolosZ;
 
 import java.util.ArrayList;

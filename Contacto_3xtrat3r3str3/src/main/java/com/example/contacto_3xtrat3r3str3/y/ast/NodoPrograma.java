@@ -22,12 +22,15 @@ public sealed interface NodoPrograma extends NodoAST permits NodoPrograma.Progra
         }
 
         public List<FuncionC> aFuncionesC(TablaSimbolos tabla) {
+            System.out.println("DEBUG aFuncionesC (Y) llamado. Total funciones en AST: " + funciones.size());
             List<FuncionC> resultado = new ArrayList<>();
             for (NodoFuncion f : funciones) {
                 if (f instanceof NodoFuncion.Funcion funcion) {
+                    System.out.println("DEBUG aFuncionesC (Y) procesando: " + funcion.nombre());
                     resultado.add(funcion.aFuncionC(tabla));
                 }
             }
+            System.out.println("DEBUG aFuncionesC (Y) resultado: " + resultado.size());
             return resultado;
         }
 

@@ -1,6 +1,6 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.c;
 
-import com.example.contacto_3xtrat3r3str3.c3d_v2.Cuarteta;
+import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 import java.util.List;
 
@@ -76,7 +76,8 @@ public class GeneradorC {
         for (int i = 0; i < tipos.size(); i++) {
             String tipoTemp = tipos.get(i);
             if ("cadena".equals(tipoTemp) || "textum".equals(tipoTemp)) {
-                sb.append("    char t").append(i).append("[256];\n");
+                // Temporal de cadena: puntero, no buffer.
+                sb.append("    char* t").append(i).append(";\n");
             } else if (esTipoC(tipoTemp)) {
                 // El tipo ya viene en formato C (struct X*, int, double, char, etc.)
                 sb.append("    ").append(tipoTemp)
