@@ -32,9 +32,9 @@ public class PanelSalida extends TabPane {
         tablaErrores = crearTablaErrores();
         Tab tabErrores = new Tab("Errores", tablaErrores);
 
-        // 3. Cuartetas / C3D
+        // 3. Codigo C
         txtCuartetas = crearAreaTerminal();
-        Tab tabCuartetas = new Tab("Cuartetas / C3D", txtCuartetas);
+        Tab tabCuartetas = new Tab("Codigo C", txtCuartetas);
 
         getTabs().addAll(tabConsola, tabErrores, tabCuartetas);
     }

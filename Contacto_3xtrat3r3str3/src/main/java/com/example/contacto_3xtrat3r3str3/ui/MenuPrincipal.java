@@ -1,16 +1,17 @@
 package com.example.contacto_3xtrat3r3str3.ui;
 
+import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 public class MenuPrincipal {
 
-    private final MenuBar barra;
+    private final HBox barra;
 
-    // Callbacks que la VentanaPrincipal conectará
     public Runnable onNuevoArchivo;
     public Runnable onAbrirArchivo;
     public Runnable onAbrirCarpeta;
@@ -23,9 +24,9 @@ public class MenuPrincipal {
     public Runnable onCompilar;
 
     public MenuPrincipal(Stage stage) {
-        barra = new MenuBar();
+        barra = new HBox();
+        barra.setStyle("-fx-background-color: #ffffff; -fx-padding: 0;");
 
-        // -------- Archivo --------
         Menu archivo = new Menu("Archivo");
         archivo.getItems().addAll(
                 item("Nuevo archivo",         () -> ejecutar(onNuevoArchivo)),
@@ -44,37 +45,22 @@ public class MenuPrincipal {
                 })
         );
 
-        // -------- Editar --------
-        Menu editar = new Menu("Editar");
-        editar.getItems().addAll(
-                item("Deshacer", null),
-                item("Rehacer",  null),
-                new SeparatorMenuItem(),
-                item("Cortar",   null),
-                item("Copiar",   null),
-                item("Pegar",    null)
-        );
+        MenuBar menuBar = new MenuBar(archivo);
+        menuBar.setStyle("-fx-background-color: transparent;");
 
-        // -------- Ejecutar --------
-        Menu ejecutar = new Menu("Ejecutar");
-        ejecutar.getItems().addAll(
-                item("Analizar",  () -> ejecutar(onAnalizar)),
-                item("Compilar",  () -> ejecutar(onCompilar))
-        );
+        // -------- Botones --------
+        Button btnAnalizar = new Button("Analizar");
+        btnAnalizar.setOnAction(e -> ejecutar(onAnalizar));
+        btnAnalizar.setStyle(estiloBoton("#1976D2", "#1565C0"));
 
-        // -------- Ayuda --------
-        Menu ayuda = new Menu("Ayuda");
-        ayuda.getItems().addAll(
-                item("Manual de usuario",     null),
-                item("Documentación técnica", null),
-                new SeparatorMenuItem(),
-                item("Acerca de...",          null)
-        );
+        Button btnCompilar = new Button("Compilar");
+        btnCompilar.setOnAction(e -> ejecutar(onCompilar));
+        btnCompilar.setStyle(estiloBoton("#388E3C", "#2E7D32"));
 
-        barra.getMenus().addAll(archivo, editar, ejecutar, ayuda);
+        barra.getChildren().addAll(menuBar, btnAnalizar, btnCompilar);
     }
 
-    public MenuBar getBarra() { return barra; }
+    public HBox getBarra() { return barra; }
 
     private void ejecutar(Runnable r) { if (r != null) r.run(); }
 
@@ -82,5 +68,18 @@ public class MenuPrincipal {
         MenuItem mi = new MenuItem(texto);
         if (accion != null) mi.setOnAction(e -> accion.run());
         return mi;
+    }
+
+    private static String estiloBoton(String colorBase, String colorHover) {
+        return "-fx-background-color: " + colorBase + ";" +
+                "-fx-text-fill: white;" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 0;" +
+                "-fx-border-radius: 0;" +
+                "-fx-padding: 6 16 6 16;" +
+                "-fx-cursor: hand;" +
+                "-fx-border-color: transparent;" +
+                "-fx-focus-color: transparent;" +
+                "-fx-faint-focus-color: transparent;";
     }
 }

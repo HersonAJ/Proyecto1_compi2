@@ -60,7 +60,7 @@ public class VentanaPrincipal {
         SplitPane.setResizableWithParent(panelSalida, true);
         raiz.setCenter(splitCentral);
 
-        Region barraEstado = placeholder("Barra de estado");
+        Region barraEstado = placeholder("");
         barraEstado.setPrefHeight(24);
         raiz.setBottom(barraEstado);
 
