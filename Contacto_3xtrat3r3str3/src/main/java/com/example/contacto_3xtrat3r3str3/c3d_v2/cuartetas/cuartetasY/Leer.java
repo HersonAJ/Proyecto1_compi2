@@ -5,9 +5,13 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemor
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * scanf con formato según el tipo del destino.
- * Necesita la dirección del destino (&destino) para tipos primitivos.
- * Para cadenas: scanf("%s", destino) sin '&' porque ya es puntero.
+ * Cuarteta: read -> x
+ *
+ * Lee un valor de consola y lo guarda en el destino.
+ * El formato de scanf se elige según el tipo. Los tipos primitivos
+ * necesitan '&' (dirección); las cadenas no, porque ya son punteros.
+ * Ejemplo en .y: leer()
+ * C generado:    scanf("%d", &x);
  */
 public class Leer extends Cuarteta {
 
@@ -35,10 +39,10 @@ public class Leer extends Cuarteta {
     public void aCodigoC(StringBuilder sb) {
         sb.append("    scanf(\"").append(formato()).append("\", ");
         if ("cadena".equals(tipo)) {
-            destino.aCodigoC(sb);   // ya es puntero
+            destino.aCodigoC(sb);
         } else {
             sb.append('&');
-            destino.aCodigoC(sb);   // dirección para primitivos
+            destino.aCodigoC(sb);
         }
         sb.append(");\n");
     }

@@ -6,9 +6,13 @@ import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import java.util.List;
 
 /**
- * Valida reglas de flujo de control:
- *  - 'romper' y 'continuar' solo dentro de ciclos.
- *  - Detección de código inalcanzable después de 'romper'/'continuar'.
+ * Valida reglas de flujo de control en .y.
+ *
+ * Validaciones:
+ *   - 'romper' fuera de un ciclo                -> validarRomper
+ *   - 'continuar' fuera de un ciclo             -> validarContinuar
+ *   - Código inalcanzable tras romper/continuar -> validarCodigoInalcanzable
+ *   - Función con retorno no garantizado        -> validarRetornoGarantizado
  */
 public class ValidadorFlujo {
 
@@ -28,6 +32,7 @@ public class ValidadorFlujo {
         nivelCiclo--;
     }
 
+    /** Verifica que 'romper' esté dentro de un ciclo. */
     public void validarRomper(NodoSentencia.Romper r) {
         if (nivelCiclo == 0) {
             errores.add(new ErrorSemantico(r.linea(), r.columna(),
@@ -36,6 +41,7 @@ public class ValidadorFlujo {
         }
     }
 
+    /** Verifica que 'continuar' esté dentro de un ciclo. */
     public void validarContinuar(NodoSentencia.Continuar c) {
         if (nivelCiclo == 0) {
             errores.add(new ErrorSemantico(c.linea(), c.columna(),
@@ -45,12 +51,11 @@ public class ValidadorFlujo {
     }
 
     // CODIGO INALCANZABLE
-
-
-     //Recorre un bloque y reporta las instrucciones que aparecen después
-     //de un 'romper' o 'continuar' VÁLIDO (dentro de un ciclo).
-     //Si el romper/continuar está fuera de un ciclo, no se reporta código
-     //inalcanzable, porque ese romper/continuar ya genera su propio error.
+    /**
+     * Reporta instrucciones inalcanzables (después de un romper/continuar válido).
+     * Si el romper/continuar está fuera de un ciclo, no se reporta código
+     * inalcanzable porque ese romper/continuar ya genera su propio error.
+     */
     public void validarCodigoInalcanzable(List<NodoSentencia> bloque) {
         if (bloque == null) return;
 
@@ -72,7 +77,11 @@ public class ValidadorFlujo {
         }
     }
 
-    //Verifica que una función con tipo de retorno declarado tenga un 'retornar' garantizado en todos los caminos posibles.
+    // RETORNO GARANTIZADO
+    /**
+     * Verifica que una función con tipo de retorno declarado tenga
+     * un 'retornar' garantizado en todos los caminos posibles.
+     */
     public void validarRetornoGarantizado(String tipoRetorno,
                                           List<NodoSentencia> cuerpo,
                                           int lineaFuncion,
@@ -86,7 +95,6 @@ public class ValidadorFlujo {
             return;
         }
 
-        // Verificar si el último bloque garantiza retorno.
         boolean garantiza = bloqueGarantizaRetorno(cuerpo);
 
         if (!garantiza) {
@@ -97,7 +105,7 @@ public class ValidadorFlujo {
         }
     }
 
-    //Devuelve true si un bloque garantiza que siempre se retorna.
+    /** Devuelve true si un bloque garantiza que siempre se retorna. */
     private boolean bloqueGarantizaRetorno(List<NodoSentencia> bloque) {
         if (bloque == null || bloque.isEmpty()) return false;
         for (NodoSentencia s : bloque) {
@@ -108,25 +116,24 @@ public class ValidadorFlujo {
         return false;
     }
 
-    //Devuelve true si una instrucción garantiza que se retorna en todos los caminos.
+    /** Devuelve true si una instrucción garantiza que se retorna en todos los caminos. */
     private boolean instruccionGarantizaRetorno(NodoSentencia s) {
         // Caso 1: retorno directo.
         if (s instanceof NodoSentencia.Retorno) {
             return true;
         }
 
-        // Caso 2: condicional con rama 'contrario' (else) donde ambas ramas retornan.
+        // Caso 2: condicional con rama 'contrario' donde todas las ramas retornan.
         if (s instanceof NodoSentencia.Condicional c) {
             boolean siRetorna = bloqueGarantizaRetorno(c.cuerpoSi());
 
-            // 'contrario' es el equivalente al else. Si no hay 'contrario',
-            // no se garantiza que la rama else retorne.
+            // 'contrario' es el equivalente al else. Si no hay, no se garantiza.
             if (c.cuerpoContrario() == null) {
                 return false;
             }
             boolean contrarioRetorna = bloqueGarantizaRetorno(c.cuerpoContrario());
 
-            // Además, si hay 'sino' intermedio, también debe retornar.
+            // Si hay 'sino' intermedio, también debe retornar.
             boolean sinoRetorna = true;
             if (c.cuerpoSino() != null) {
                 sinoRetorna = bloqueGarantizaRetorno(c.cuerpoSino());
@@ -134,7 +141,6 @@ public class ValidadorFlujo {
 
             return siRetorna && contrarioRetorna && sinoRetorna;
         }
-
         // Cualquier otra instrucción no garantiza retorno.
         return false;
     }

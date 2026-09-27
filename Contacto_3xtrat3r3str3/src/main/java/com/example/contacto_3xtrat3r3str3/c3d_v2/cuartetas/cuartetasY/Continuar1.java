@@ -3,7 +3,12 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * goto L_continuar;
+ * Cuarteta: goto Lx
+ *
+ * Salto incondicional al inicio del ciclo (o a su actualización).
+ * Se emite cuando el lenguaje fuente usa 'continuar' (en .y) o 'continue'.
+ * Ejemplo en .y: continuar
+ * C generado:    goto L0;
  */
 public class Continuar1 extends Cuarteta {
 

@@ -4,7 +4,11 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemor
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * a[i] = y
+ * Cuarteta: a[i] = y
+ *
+ * Asigna un valor a la posición 'i' de un arreglo.
+ * Ejemplo en .y: numeros[2] = 30
+ * C generado:    numeros[2] = 30;
  */
 public class AsignacionArreglo extends Cuarteta {
 

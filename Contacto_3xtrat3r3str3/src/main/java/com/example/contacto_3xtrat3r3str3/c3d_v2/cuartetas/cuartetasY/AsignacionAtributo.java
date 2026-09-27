@@ -5,7 +5,12 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemor
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * p.campo = y   (o p->campo = y si p es puntero)
+ * Cuarteta: p.campo = y        (struct por valor)
+ *            p->campo = y       (struct por puntero)
+ *
+ * Asigna un valor a un campo de una estructura u objeto.
+ * Ejemplo en .y: alumno1.nombre = "alguien"
+ * C generado:    alumno1.nombre = "alguien";
  */
 public class AsignacionAtributo extends Cuarteta {
 

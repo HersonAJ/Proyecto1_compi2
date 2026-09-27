@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida el uso correcto de estructuras:
- *   - Inicialización de una estructura con la cantidad correcta de valores.
- *   - Inicialización de una estructura con los tipos correctos de valores.
+ * Valida la inicialización de estructuras en .y.
+ *
+ * Validaciones:
+ *   - Cantidad de valores incorrecta   -> validarInicializacionEstructura
+ *   - Tipo de valor incompatible       -> validarInicializacionEstructura
  */
 public class ValidadorEstructuras {
 
@@ -26,8 +28,10 @@ public class ValidadorEstructuras {
         this.tipos = tipos;
     }
 
-     //Valida la inicialización de una estructura.
-     //Se llama desde ValidadorSemantico en el case DECLARACION_ESTRUCTURA.
+    /**
+     * Valida la inicialización de una estructura.
+     * Se llama desde ValidadorSemantico en el case DECLARACION_ESTRUCTURA.
+     */
     public void validarInicializacionEstructura(NodoSentencia.DeclaracionEstructura d) {
         // Sin inicialización, no hay nada que validar.
         if (d.inicializacion() == null || d.inicializacion().isEmpty()) {
@@ -46,14 +50,14 @@ public class ValidadorEstructuras {
         List<String> tiposAtributos = List.copyOf(def.atributos().values());
         List<String> nombresAtributos = List.copyOf(def.atributos().keySet());
 
-        // A12: Verificar cantidad de valores.
+        // Verificar cantidad de valores.
         if (d.inicializacion().size() != tiposAtributos.size()) {
             errores.add(new ErrorSemantico(d.linea(), d.columna(),
                     "Cantidad incorrecta en inicialización de estructura",
                     "La estructura '" + d.tipoEstructura() + "' espera "
                             + tiposAtributos.size() + " valores, se encontraron "
                             + d.inicializacion().size()));
-            return; // sin cantidad correcta, no comparamos tipos
+            return; // sin cantidad correcta
         }
 
         // Verificar tipos de cada valor.

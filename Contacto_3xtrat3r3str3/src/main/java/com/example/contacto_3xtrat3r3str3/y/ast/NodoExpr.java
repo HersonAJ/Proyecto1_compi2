@@ -11,6 +11,7 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.ConversionT
 
 import java.util.List;
 
+//Nodos de expresión del AST de .y. Cada expresión devuelve el AccesoMemoria que representa su resultado.
 public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.LiteralEntero,
         NodoExpr.LiteralFlotante,
@@ -30,6 +31,7 @@ public sealed interface NodoExpr extends NodoAST permits
     AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx);
 
     // LITERALES
+    // '10'  ->  operando literal entero
     record LiteralEntero(int linea, int columna, int valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_ENTERO; }
@@ -40,6 +42,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // '3.14'  ->  operando literal flotante
     record LiteralFlotante(int linea, int columna, double valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_FLOTANTE; }
@@ -50,6 +53,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // '"hola"'  ->  operando literal cadena
     record LiteralCadena(int linea, int columna, String valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CADENA; }
@@ -60,6 +64,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // 'a'  ->  operando literal caracter
     record LiteralCaracter(int linea, int columna, char valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CARACTER; }
@@ -70,6 +75,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // 'verdadero' / 'falso'  ->  operando literal bool (1 o 0)
     record LiteralBool(int linea, int columna, boolean valor) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_BOOL; }
@@ -81,6 +87,7 @@ public sealed interface NodoExpr extends NodoAST permits
     }
 
     // ACCESOS
+    // 'x'  ->  acceso a variable usando el tipo de la tabla
     record Identificador(int linea, int columna, String nombre) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.IDENTIFICADOR; }
@@ -98,6 +105,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // 'a[i]'  ->  operando AccesoArreglo.
     record AccesoArray(int linea, int columna, NodoExpr arreglo, NodoExpr indice) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ARRAY; }
@@ -124,6 +132,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // 'p.campo'  ->  operando AccesoAtributo (con '.').
     record AccesoAtributo(int linea, int columna, NodoExpr objeto, String atributo) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ATRIBUTO; }
@@ -139,7 +148,6 @@ public sealed interface NodoExpr extends NodoAST permits
         }
 
         private String obtenerTipoCampo(ContextoTraduccion ctx, NodoExpr baseExpr, String campo) {
-            // Si la base es un identificador, sabemos el nombre de la estructura.
             if (baseExpr instanceof Identificador id) {
                 var varOpt = ctx.getTabla().buscarVariable(id.nombre());
                 if (varOpt.isEmpty()) return "entero";
@@ -157,11 +165,12 @@ public sealed interface NodoExpr extends NodoAST permits
                 return tipoY;   // tipo del lenguaje Y ("entero", "flotante", ...)
             }
 
-            return "entero"; // fallback
+            return "entero";
         }
     }
 
     // OPERACIONES
+    // 'a + b', 'a == b', ...  ->  promociones + OperacionBinaria
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.BINARIA; }
@@ -215,6 +224,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    // '-x', '!x', '++x', '--x'  ->  OperacionUnaria o x = x ± 1.
     record Unaria(int linea, int columna, String operador, NodoExpr operando, boolean prefijo) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.UNARIA; }
@@ -242,22 +252,23 @@ public sealed interface NodoExpr extends NodoAST permits
                             "Operador '" + operador + "' solo válido sobre variables (línea " + linea + ")");
                 }
 
-                // Emitimos x = x ± 1 como OperacionBinaria con literal 1.
+                // Emite x = x ± 1 como OperacionBinaria con literal 1.
                 String opBinario = "++".equals(operador) ? "+" : "-";
                 AccesoMemoria uno = new Literal(1, "entero");
                 g.emitir(new OperacionBinaria(av, av, opBinario, uno));
 
-                // Devolvemos el propio acceso: el valor actualizado está en 'x'.
+                // Devuelve el propio acceso: el valor actualizado está en 'x'.
                 return av;
             }
 
-            // 4. Operador no soportado (no debería pasar).
+            // 4. Operador no soportado
             throw new IllegalStateException(
                     "Operador unario desconocido: '" + operador + "' (línea " + linea + ")");
         }
     }
 
     // LLAMADAS A FUNCION
+    // 'suma(a, b)'  ->  Llamada con temporal de retorno
     record LlamadaFuncion(int linea, int columna, String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_FUNCION; }
@@ -294,7 +305,9 @@ public sealed interface NodoExpr extends NodoAST permits
             return t;
         }
     }
+
     // LEER COMO EXPRESION
+    // 'leer()'  ->  temporal de tipo cadena + cuarteta Leer
     record Leer(int linea, int columna) implements NodoExpr {
         @Override
         public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LEER; }
@@ -303,11 +316,11 @@ public sealed interface NodoExpr extends NodoAST permits
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccion ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
 
-            // Creamos un temporal de tipo cadena para recibir el valor leído.
+            // Cre un temporal de tipo cadena para recibir el valor leído.
             int idT = g.getContador().siguienteTemporal("cadena");
             AccesoTemporal t = new AccesoTemporal(idT, "cadena");
 
-            // Emitimos la cuádrupla Leer apuntando al temporal.
+            // Emite la cuarteta Leer apuntando al temporal.
             g.emitir(new com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY.Leer(t, "cadena"));
 
             return t;

@@ -5,6 +5,15 @@ import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 
 import java.util.List;
 
+/**
+ * Validador de alcance para .y.
+ * Verifica que los identificadores usados existan en la tabla de simbolos.
+ *
+ * Validaciones:
+ *   - Identificador no declarado       -> resolverNombre / resolverIdentificador
+ *   - Funcion no declarada             -> resolverLlamadaFuncion
+ *   - Estructura no declarada          -> resolverTipoEstructura
+ */
 public class ValidadorAlcance {
 
     private final TablaSimbolos tabla;
@@ -15,7 +24,10 @@ public class ValidadorAlcance {
         this.errores = errores;
     }
 
-    //Recorre cualquier expresion buscando identificadores y llamadas a funcion, y reporta si alguno no existe
+    /**
+     * Recorre cualquier expresion buscando identificadores y llamadas a funcion,
+     * y reporta si alguno no existe.
+     */
     public void resolverExpresion(NodoExpr expr) {
         if (expr == null) return;
 
@@ -49,20 +61,22 @@ public class ValidadorAlcance {
                 }
             }
 
-            //los literales no tienen nada que resolver
+            // Los literales no tienen nada que resolver.
             case LITERAL_ENTERO, LITERAL_FLOTANTE, LITERAL_CADENA, LITERAL_CARACTER, LITERAL_BOOL -> { }
         }
     }
 
+    /** Resuelve un identificador buscando su nombre en la tabla. */
     public void resolverIdentificador(NodoExpr.Identificador id) {
         resolverNombre(id.nombre(), id.linea(), id.columna());
     }
 
-    //Para casos donde solo se tiene el nombre suelto, como en IncrementoDecremento.
+    /**
+     * Resuelve un nombre suelto (sin nodo completo) buscando en la tabla.
+     * Si no existe como variable ni como funcion, reporta error.
+     */
     public void resolverNombre(String nombre, int linea, int columna) {
         if (tabla.buscarVariable(nombre).isEmpty()) {
-            // Si es una función, no reportar "no declarado". El error real
-            // (asignación a función) lo reporta ValidadorAsignaciones.
             if (tabla.buscarFuncion(nombre).isPresent()) {
                 return;
             }
@@ -72,6 +86,7 @@ public class ValidadorAlcance {
         }
     }
 
+    /** Verifica que la funcion llamada exista en la tabla. */
     public void resolverLlamadaFuncion(NodoExpr.LlamadaFuncion llamada) {
         if (tabla.buscarFuncion(llamada.nombre()).isEmpty()) {
             errores.add(new ErrorSemantico(llamada.linea(), llamada.columna(),
@@ -80,6 +95,7 @@ public class ValidadorAlcance {
         }
     }
 
+    /** Verifica que una estructura exista en la tabla. */
     public void resolverTipoEstructura(String nombreTipo, int linea, int columna) {
         if (nombreTipo != null && tabla.buscarEstructura(nombreTipo).isEmpty()) {
             errores.add(new ErrorSemantico(linea, columna,

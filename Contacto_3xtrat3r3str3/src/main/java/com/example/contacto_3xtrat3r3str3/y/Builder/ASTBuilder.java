@@ -9,7 +9,7 @@ import java.util.List;
 
 public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
 
-    //programa
+    // Regla inicial: junta estructuras y funciones del programa
     @Override
     public NodoAST visitPrograma(YParser.ProgramaContext ctx) {
         // Estructuras (opcional)
@@ -38,10 +38,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
     //estructuras
     @Override
     public NodoAST visitSeccionEstructuras(YParser.SeccionEstructurasContext ctx) {
-        //esta regla no genera un nodo propio
         return null;
     }
 
+    // 'estructura Nombre: ...'  ->  NodoEstructura con sus atributos
     @Override
     public NodoAST visitDefinicionEstructura(YParser.DefinicionEstructuraContext ctx) {
         if (ctx.ID() == null) {
@@ -58,6 +58,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoEstructura.Estructura(linea(ctx), columna(ctx), ctx.ID().getText(), atributos);
     }
 
+    //Atributo de estructura: primitivo, arreglo o estructura anidada.
     @Override
     public NodoAST visitAtributoEstructura(YParser.AtributoEstructuraContext ctx) {
         if (ctx.tipo() != null && !ctx.ID().isEmpty()) {
@@ -83,28 +84,23 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return null;
     }
 
-    //funciones
     @Override
     public NodoAST visitSeccionFunciones(YParser.SeccionFuncionesContext ctx) {
-        //regla contenedora no genera nodo propio
         return null;
     }
 
+    // 'definir f(...) -> tipo: ...'  ->  NodoFuncion con parametros y cuerpo.
     @Override
     public NodoAST visitDefinicionFuncion(YParser.DefinicionFuncionContext ctx) {
         if (ctx.ID() == null) {
             return null;
         }
-
         String nombre = ctx.ID().getText();
-
         //tipo de retorno opcional
         String tipoRetorno = null;
         if (ctx.tipo() != null) {
             tipoRetorno = normalizarTipo(ctx.tipo().getText());
         }
-
-        //tipo de retorno opcional
         List<NodoParametro> parametros = new ArrayList<>();
         if (ctx.parametros() != null) {
             for (YParser.ParametroContext p : ctx.parametros().parametro()) {
@@ -115,12 +111,11 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             }
         }
 
-        //cuerpo de la funcion
         List<NodoSentencia> cuerpo = construirCuerpoDeFuncion(ctx.cuerpoFuncion());
-
         return new NodoFuncion.Funcion(linea(ctx), columna(ctx), nombre, parametros, tipoRetorno, cuerpo);
     }
 
+    // Parametro: por valor, arreglo por referencia o estructura por referencia.
     @Override
     public NodoAST visitParametro(YParser.ParametroContext ctx) {
         //caso: [] tipo ID -> arreglo por referencia
@@ -135,7 +130,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
                     normalizarTipo(ctx.tipo().getText()), null, ctx.ID(0).getText(), false, false);
         }
 
-        //caso: {} Tipo ID -> estructura por referencia
+        //caso: {} Tipo ID -> estructura
         if (ctx.LLAVE_IZQ() != null && ctx.ID().size() == 2) {
             return new NodoParametro.Parametro(linea(ctx), columna(ctx),
                     null, ctx.ID(0).getText(), ctx.ID(1).getText(), false, true);
@@ -143,7 +138,6 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return null;
     }
 
-    //cuerpo de funcion y bloques
     @Override
     public NodoAST visitCuerpoFuncion(YParser.CuerpoFuncionContext ctx) {
         return null;
@@ -154,6 +148,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return null;
     }
 
+    // Convierte las instrucciones del cuerpo de una función en lista de nodos
     private List<NodoSentencia> construirCuerpoDeFuncion(YParser.CuerpoFuncionContext ctx) {
         List<NodoSentencia> cuerpo = new ArrayList<>();
         if (ctx == null) {
@@ -168,6 +163,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return  cuerpo;
     }
 
+    // Convierte las instrucciones de un bloque en lista de nodos.
     private List<NodoSentencia> construirBloque(YParser.BloqueContext ctx) {
         List<NodoSentencia> cuerpo = new ArrayList<>();
         if (ctx == null) {
@@ -182,7 +178,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return cuerpo;
     }
 
-    //instrucciones
+    // Regla contenedora: delega al hijo real. Detecta estructura local
     @Override
     public NodoAST visitInstruccion(YParser.InstruccionContext ctx) {
         var hijo = ctx.getChild(0);
@@ -190,7 +186,6 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             return null;
         }
 
-        // Caso especial: una definicion de estructura dentro de una funcion
         if (hijo instanceof YParser.DefinicionEstructuraContext defCtx) {
             NodoAST nodo = visit(defCtx);
             if (nodo instanceof NodoEstructura.Estructura estructura) {
@@ -203,10 +198,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return visit(hijo);
     }
 
-    //declaraciones
+    // Declaraciones: variable, arreglo, matriz o instancia de estructura
     @Override
     public NodoAST visitDeclaracion(YParser.DeclaracionContext ctx) {
-        //caso 1: tipo ID (IGUAL expresion)? -> variable simple, sin corchetes
+        // tipo ID
         if (ctx.tipo() != null && ctx.ID().size() == 1 && ctx.COR_IZQ().isEmpty()) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
@@ -214,7 +209,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, inicializacion);
         }
 
-        //caso 2: tipo ID [ ENTERO_LIT ] (IGUAL { listaExpresiones })? -> arreglo 1D
+        // tipo ID [ n ]  (arreglo 1D)
         if (ctx.tipo() != null && ctx.COR_IZQ().size() == 1) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
@@ -233,8 +228,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
             return new NodoSentencia.DeclaracionArreglo(linea(ctx), columna(ctx),tipo, nombre, tamano, inicializacion);
         }
 
-        //caso 3: tipo ID [ ENTERO_LIT ] [ ENTERO_LIT ] -> matriz, sin inicializador
-//caso 3: tipo ID [ ENTERO_LIT ] [ ENTERO_LIT ] -> matriz
+        // tipo ID [ n ][ m ]  (matriz)
         if (ctx.tipo() != null && ctx.COR_IZQ().size() == 2) {
             String tipo = normalizarTipo(ctx.tipo().getText());
             String nombre = ctx.ID(0).getText();
@@ -260,7 +254,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
                     tipo, nombre, filas, columnas, inicializacion);
         }
 
-        //caso 4: ID ID (IGUAL { listaExpresiones })? -> instancia de estructura
+        // ID ID  (instancia de estructura)
         if (ctx.tipo() == null && ctx.ID().size() == 2) {
             String tipoEstructura = ctx.ID(0).getText();
             String nombre = ctx.ID(1).getText();
@@ -281,11 +275,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
 
     @Override
     public NodoAST visitListaExpresiones(YParser.ListaExpresionesContext ctx) {
-        //regla contenedora
         return null;
     }
 
-    //asignaciones
+    // 'destino = valor'  ->  NodoSentencia.Asignacion
     @Override
     public NodoAST visitAsignacion(YParser.AsignacionContext ctx) {
         NodoExpr destino = (NodoExpr) visit(ctx.accesoVariable());
@@ -296,18 +289,17 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Asignacion(linea(ctx), columna(ctx), destino, valor);
     }
 
-    //incremento|decremento
+    // 'x++' o 'x--'  ->  NodoSentencia.IncrementoDecremento
     @Override
     public NodoAST visitIncrementoDecremento(YParser.IncrementoDecrementoContext ctx) {
         if (ctx.ID() == null) {
             return null;
         }
-
         String operador = ctx.INCREMENTO() != null ? "++" : "--";
         return new NodoSentencia.IncrementoDecremento(linea(ctx), columna(ctx), operador, ctx.ID().getText());
     }
 
-    //instrucciones simples
+    // 'retornar expr' o 'retornar'  ->  NodoSentencia.Retorno.
     @Override
     public NodoAST visitRetorno(YParser.RetornoContext ctx) {
         NodoExpr valor = ctx.expresion() != null
@@ -316,6 +308,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Retorno(linea(ctx), columna(ctx), valor);
     }
 
+    // 'imprimir(expr)'  ->  NodoSentencia.Imprimir
     @Override
     public NodoAST visitImprimir(YParser.ImprimirContext ctx) {
         NodoExpr valor = (NodoExpr) visit(ctx.expresion());
@@ -325,41 +318,49 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Imprimir(linea(ctx), columna(ctx), valor);
     }
 
+    // 'leer()' como sentencia  ->  NodoSentencia.Leer
     @Override
     public NodoAST visitLeer(YParser.LeerContext ctx) {
         return new NodoSentencia.Leer(linea(ctx), columna(ctx));
     }
 
+    // 'leer()' como expresión  ->  NodoExpr.Leer
     @Override
     public NodoAST visitExprLeer(YParser.ExprLeerContext ctx) {
         return new NodoExpr.Leer(linea(ctx), columna(ctx));
     }
+
+    // 'romper'  ->  NodoSentencia.Romper
     @Override
     public NodoAST visitRomper(YParser.RomperContext ctx) {
         return new NodoSentencia.Romper(linea(ctx), columna(ctx));
     }
 
+    // 'continuar'  ->  NodoSentencia.Continuar
     @Override
     public NodoAST visitContinuar(YParser.ContinuarContext ctx) {
         return new NodoSentencia.Continuar(linea(ctx), columna(ctx));
     }
 
-    //expresiones basicas que no dependen de otras
+    // '(expr)'  ->  devuelve la expresión interna
     @Override
     public NodoAST visitExprParentesis(YParser.ExprParentesisContext ctx) {
         return visit(ctx.expresion());
     }
 
+    // Literal como expresion.
     @Override
     public NodoAST visitExprLiteral(YParser.ExprLiteralContext ctx) {
         return visit(ctx.literal());
     }
 
+    // Acceso variable como expresion.
     @Override
     public NodoAST visitExprAcceso(YParser.ExprAccesoContext ctx) {
         return visit(ctx.accesoVariable());
     }
 
+    // Literal: entero, flotante, cadena, caracter o bool.
     @Override
     public NodoAST visitLiteral(YParser.LiteralContext ctx) {
         if (ctx.ENTERO_LIT() != null) {
@@ -370,12 +371,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         }
         if (ctx.CADENA_LIT() != null) {
             String texto = ctx.CADENA_LIT().getText();
-            //quitar las comillas dobles
             return new NodoExpr.LiteralCadena(linea(ctx), columna(ctx), texto.substring(1, texto.length() -1));
         }
         if (ctx.CARACTER_LIT() != null) {
             String texto = ctx.CARACTER_LIT().getText();
-            //quitar las comillas simples
             return new NodoExpr.LiteralCaracter(linea(ctx),columna(ctx), texto.charAt(1));
         }
         if (ctx.VERDADERO() != null) {
@@ -387,10 +386,9 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return null;
     }
 
-    //arreglos, atributos, identificadores
+    // Acceso encadenado: 'a', 'a.b', 'a[i]', 'a.b[i].c', ...
     @Override
     public NodoAST visitAccesoVariable(YParser.AccesoVariableContext ctx) {
-        //base el primer id siempre esta presente
         NodoExpr base = new NodoExpr.Identificador(linea(ctx), columna(ctx), ctx.ID(0).getText());
 
         //recorrer los accesos encadenados .atributo o [indice]
@@ -420,38 +418,43 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return base;
     }
 
-    //expresiones compuestas
+    // 'a + b' o 'a - b'
     @Override
     public NodoAST visitExprSumaResta(YParser.ExprSumaRestaContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    // 'a * b' o 'a / b'.
     @Override
     public NodoAST visitExprMultiplicacion(YParser.ExprMultiplicacionContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    // 'a < b', 'a > b', 'a <= b' o 'a >= b'
     @Override
     public NodoAST visitExprRelacional(YParser.ExprRelacionalContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    // 'a == b' o 'a != b'
     @Override
     public NodoAST visitExprIgualdad(YParser.ExprIgualdadContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    // 'a && b'
     @Override
     public NodoAST visitExprAnd(YParser.ExprAndContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), "&&");
     }
 
+    // 'a || b'
     @Override
     public NodoAST visitExprOr(YParser.ExprOrContext ctx) {
         return construirBinaria(ctx,ctx.expresion(0), ctx.expresion(1), "||");
     }
 
-    //helper para la construccion
+    // Construye un NodoExpr.Binaria a partir de dos subexpresiones
     private NodoExpr construirBinaria(org.antlr.v4.runtime.ParserRuleContext ctx,
                                       YParser.ExpresionContext izqCtx,
                                       YParser.ExpresionContext derCtx,
@@ -467,9 +470,9 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoExpr.Binaria(linea(ctx), columna(ctx), operador, izq, der);
     }
 
+    // '-expr' o '!expr'
     @Override
     public NodoAST visitExprUnaria(YParser.ExprUnariaContext ctx) {
-        //puede ser -expresion, !expresion
         String operador;
         if (ctx.MENOS() != null) {
             operador = "-";
@@ -486,6 +489,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoExpr.Unaria(linea(ctx), columna(ctx), operador, operando, true);
     }
 
+    // 'nombre(args)'  ->  NodoExpr.LlamadaFuncion
     @Override
     public NodoAST visitExprLlamadaFuncion(YParser.ExprLlamadaFuncionContext ctx) {
         if (ctx.ID() == null) {
@@ -505,11 +509,10 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
 
     @Override
     public NodoAST visitArgumentos(YParser.ArgumentosContext ctx) {
-        //regla conteneroda, no genera nodo propio
         return null;
     }
 
-    //condicional
+    // 'si/sino/contrario'  ->  NodoSentencia.Condicional.
     @Override
     public NodoAST visitCondicional(YParser.CondicionalContext ctx) {
         //extraer la condicion principal
@@ -534,7 +537,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Condicional(linea(ctx), columna(ctx), condicionSi, cuerpoSi, condicionSino, cuerpoSino, cuerpoContrario);
     }
 
-    //elegir
+    // 'elegir (expr): caso ... siempre ...'  ->  NodoSentencia.Elegir
     @Override
     public NodoAST visitElegir(YParser.ElegirContext ctx) {
         NodoExpr expresion = (NodoExpr) visit(ctx.expresion());
@@ -558,6 +561,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Elegir(linea(ctx), columna(ctx), expresion, casos, siempre);
     }
 
+    // 'caso N: ...'  ->  NodoSentencia.CasoElegir
     @Override
     public NodoAST visitCaso(YParser.CasoContext ctx) {
         NodoExpr valor = (NodoExpr) visit(ctx.literal());
@@ -568,13 +572,14 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CasoElegir(linea(ctx), columna(ctx), valor, cuerpo);
     }
 
+    // 'siempre: ...'  ->  NodoSentencia.SiempreElegir.
     @Override
     public NodoAST visitSiempre(YParser.SiempreContext ctx) {
         List<NodoSentencia> cuerpo = construirBloque(ctx.bloque());
         return new NodoSentencia.SiempreElegir(linea(ctx), columna(ctx), cuerpo);
     }
 
-    //ciclos
+    // 'para (init; cond; act): ...'  ->  NodoSentencia.CicloPara
     @Override
     public NodoAST visitCicloPara(YParser.CicloParaContext ctx) {
         String tipo = normalizarTipo(ctx.inicializacionPara().tipo().getText());
@@ -605,6 +610,7 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return null;
     }
 
+    // 'mientras (cond) hacer ...'  ->  NodoSentencia.CicloMientras.
     @Override
     public NodoAST visitCicloMientras(YParser.CicloMientrasContext ctx) {
         NodoExpr condicion = (NodoExpr) visit(ctx.expresion());
@@ -612,13 +618,14 @@ public class ASTBuilder extends YParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CicloMientras(linea(ctx), columna(ctx), condicion, cuerpo);
     }
 
+    // 'hacer: ... mientras (cond)'  ->  NodoSentencia.CicloHacerMientras.
     @Override
     public NodoAST visitCicloHacerMientras(YParser.CicloHacerMientrasContext ctx) {
         List<NodoSentencia> cuerpo = construirBloque(ctx.bloque());
         NodoExpr condicion = (NodoExpr) visit(ctx.expresion());
         return new NodoSentencia.CicloHacerMientras(linea(ctx), columna(ctx), cuerpo, condicion);
     }
-//helper
+
     protected int linea(org.antlr.v4.runtime.ParserRuleContext ctx) {
         return ctx.getStart().getLine();
     }

@@ -8,10 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida reglas específicas de asignaciones:
- *   - No se puede asignar a un arreglo completo (sin índice).
- *   - No se puede asignar a una función.
- *   - No se puede asignar a una estructura completa si no es del mismo tipo.
+ * Valida las asignaciones de .y.
+ *
+ * Validaciones:
+ *   - No asignar a una funcion        -> validarIdentificadorComoDestino
+ *   - No asignar a un arreglo entero  -> validarIdentificadorComoDestino
  */
 public class ValidadorAsignaciones {
 
@@ -23,22 +24,27 @@ public class ValidadorAsignaciones {
         this.errores = errores;
     }
 
-     //Valida que el destino de una asignación sea asignable.
-     //Se llama desde ValidadorSemantico en el case ASIGNACION
+    /**
+     * Valida que el destino de una asignacion sea asignable.
+     * Se llama desde ValidadorSemantico en el case ASIGNACION.
+     */
     public void validarDestino(NodoSentencia.Asignacion asignacion) {
         NodoExpr destino = asignacion.destino();
 
-        // Caso 1: destino es un Identificador simple (sin índices ni atributos).
+        // Solo se valida cuando el destino es un identificador simple.
         if (destino instanceof NodoExpr.Identificador id) {
             validarIdentificadorComoDestino(id);
         }
-
     }
 
+    /**
+     * Verifica que un identificador pueda ser destino de asignacion.
+     * Reporta error si es una funcion o si es un arreglo sin indice.
+     */
     private void validarIdentificadorComoDestino(NodoExpr.Identificador id) {
         String nombre = id.nombre();
 
-        // 1. Si es una función, no se puede asignar.
+        // 1. Si es una funcion, no se puede asignar.
         if (tabla.buscarFuncion(nombre).isPresent()) {
             errores.add(new ErrorSemantico(id.linea(), id.columna(),
                     "Asignación inválida",

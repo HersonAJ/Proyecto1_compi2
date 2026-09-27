@@ -2,22 +2,21 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasY;
 
 
 /**
- * Decide el tipo resultado de una operación binaria y qué conversiones
- * hacen falta en cada operando, según las reglas de promoción implícita.
+ * Promociones de tipo para operaciones binarias en .y.
+ * Decide el tipo resultado y las conversiones necesarias.
  *
- * Jerarquía (de menor a mayor): caracter < entero < flotante
- * bool se trata como entero.
- * cadena solo admite == y != (se maneja fuera de esta clase).
+ * Jerarquía: caracter < entero < flotante.   bool se trata como entero.
+ *
+ * Ejemplo: entero + flotante  →  resultado flotante, se convierte el entero.
  */
 public final class PromocionTipos {
 
     private PromocionTipos() {}
 
     /**
-     * Resultado de promover dos tipos.
-     *   tipoResultado: el tipo del resultado de la operación.
-     *   conversionIzq: tipo al que hay que convertir el izquierdo, o null si no hace falta.
-     *   conversionDer: tipo al que hay que convertir el derecho, o null si no hace falta.
+     * Resultado de la promoción.
+     *   tipoResultado: tipo final de la operación.
+     *   conversionIzq / conversionDer: tipo al que convertir cada operando (null si no aplica).
      */
     public record Resultado(String tipoResultado, String conversionIzq, String conversionDer) {}
 
@@ -31,21 +30,21 @@ public final class PromocionTipos {
             return new Resultado(tipoResultadoBase(izq), null, null);
         }
 
-        // Si alguno es flotante, resultado flotante.
+        // Si alguno es flotante, el resultado es flotante.
         if (izq.equals("flotante") || der.equals("flotante")) {
             String convIzq = izq.equals("flotante") ? null : "flotante";
             String convDer = der.equals("flotante") ? null : "flotante";
             return new Resultado("flotante", convIzq, convDer);
         }
 
-        // Si alguno es entero (y el otro caracter), resultado entero.
+        // Si alguno es entero (y el otro caracter), el resultado es entero.
         if (izq.equals("entero") || der.equals("entero")) {
             String convIzq = izq.equals("entero") ? null : "entero";
             String convDer = der.equals("entero") ? null : "entero";
             return new Resultado("entero", convIzq, convDer);
         }
 
-        // Solo quedan caracter + caracter (ya cubierto arriba) o casos raros.
+        // Solo quedan caracter + caracter  o casos raros.
         return new Resultado(tipoResultadoBase(izq), null, null);
     }
 

@@ -7,6 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Orquesta todas las validaciones semánticas del lenguaje .y.
+ *
+ * Orden de ejecución:
+ *   1. Declarar estructuras y firmas de funciones   -> analizar
+ *   2. Procesar cuerpo de cada función              -> procesarFuncion
+ *   3. Procesar cada sentencia del cuerpo           -> procesarSentencia
+ */
 public class ValidadorSemantico {
 
     private final TablaSimbolos tabla = new TablaSimbolos();
@@ -21,6 +29,7 @@ public class ValidadorSemantico {
 
     private NodoFuncion.Funcion funcionActual;
 
+    /** Punto de entrada: recorre el programa completo. */
     public List<ErrorSemantico> analizar(NodoPrograma.Programa programa) {
         // Fase 1: declarar estructuras y firmas de funciones.
         for (NodoEstructura e : programa.estructuras()) {
@@ -29,15 +38,14 @@ public class ValidadorSemantico {
         for (NodoFuncion f : programa.funciones()) {
             declaraciones.registrarFirmaFuncion((NodoFuncion.Funcion) f);
         }
-
         // Fase 2: procesar el cuerpo de cada función.
         for (NodoFuncion f : programa.funciones()) {
             procesarFuncion((NodoFuncion.Funcion) f);
         }
-
         return errores;
     }
 
+    /** Procesa el cuerpo de una función dentro de su propio scope. */
     private void procesarFuncion(NodoFuncion.Funcion funcion) {
         funcionActual = funcion;
         tabla.entrarScope(funcion.nombre());
@@ -54,13 +62,13 @@ public class ValidadorSemantico {
         funcionActual = null;
     }
 
+    /** Procesa un bloque: primero código inalcanzable, luego cada sentencia. */
     private void procesarBloque(List<NodoSentencia> bloque) {
-        // 1. Validar código inalcanzable en este nivel.
         flujo.validarCodigoInalcanzable(bloque);
-        // 2. Procesar cada sentencia.
         for (NodoSentencia s : bloque) procesarSentencia(s);
     }
 
+    /** Procesa cada tipo de sentencia con sus validaciones correspondientes. */
     private void procesarSentencia(NodoSentencia s) {
         switch (s.tipoNodo()) {
 
@@ -138,7 +146,6 @@ public class ValidadorSemantico {
             case IMPRIMIR -> {
                 NodoExpr valor = ((NodoSentencia.Imprimir) s).expresion();
                 alcance.resolverExpresion(valor);
-                // Validar llamadas dentro de la expresión imprimir.
                 validarLlamadasEnExpresion(valor);
                 tipos.tipoDeExpresion(valor);
             }
@@ -155,19 +162,18 @@ public class ValidadorSemantico {
         }
     }
 
-    // VALIDACIONES ESPECIFICAS
-
+    // VALIDACIONES ESPECÍFICAS
+    /** Valida que los tipos del destino y del valor de una asignación sean compatibles. */
     private void validarAsignacion(NodoSentencia.Asignacion asignacion) {
-        // Resolver el tipo del destino.
         String tipoDestino = tipos.tipoDeExpresion(asignacion.destino());
         String tipoValor = tipos.tipoDeExpresion(asignacion.valor());
 
-        if (tipoDestino == null || tipoValor == null) return; // error previo
+        if (tipoDestino == null || tipoValor == null) return;
         tipos.validarAsignacion(tipoDestino, tipoValor, asignacion.linea(), asignacion.columna());
     }
 
+    /** Valida que el operando de ++/-- sea numérico. */
     private void validarIncrementoDecremento(NodoSentencia.IncrementoDecremento inc) {
-        // El identificador debe ser numérico (entero o flotante).
         Optional<TablaSimbolos.SimboloVariable> simbolo = tabla.buscarVariable(inc.nombre());
         if (simbolo.isEmpty()) return;
 
@@ -181,13 +187,13 @@ public class ValidadorSemantico {
         }
     }
 
+    /** Valida recursivamente las llamadas dentro de una expresión. */
     private void validarLlamadasEnExpresion(NodoExpr expr) {
         if (expr == null) return;
 
         if (expr instanceof NodoExpr.LlamadaFuncion llamada) {
             Optional<TablaSimbolos.DefinicionFuncion> def = tabla.buscarFuncion(llamada.nombre());
             def.ifPresent(d -> tipos.validarLlamada(llamada, d));
-            // Resolver recursivamente los argumentos.
             for (NodoExpr arg : llamada.argumentos()) {
                 validarLlamadasEnExpresion(arg);
             }
@@ -205,7 +211,7 @@ public class ValidadorSemantico {
     }
 
     // ESTRUCTURAS DE CONTROL
-
+    /** Procesa un 'si/sino/contrario'. */
     private void procesarCondicional(NodoSentencia.Condicional c) {
         alcance.resolverExpresion(c.condicion());
         tipos.tipoDeExpresion(c.condicion());
@@ -233,6 +239,7 @@ public class ValidadorSemantico {
         }
     }
 
+    /** Procesa un 'elegir' con sus casos y 'siempre'. */
     private void procesarElegir(NodoSentencia.Elegir e) {
         alcance.resolverExpresion(e.expresion());
         validarLlamadasEnExpresion(e.expresion());
@@ -252,6 +259,7 @@ public class ValidadorSemantico {
         }
     }
 
+    /** Procesa un ciclo 'para'. */
     private void procesarCicloPara(NodoSentencia.CicloPara c) {
         tabla.entrarScope("para");
         declaraciones.declararVariableCiclo(c.nombreVariable(), c.tipoInicializacion(), c.linea(), c.columna());
@@ -271,6 +279,7 @@ public class ValidadorSemantico {
         tabla.salirScope();
     }
 
+    /** Procesa un ciclo 'mientras'. */
     private void procesarCicloMientras(NodoSentencia.CicloMientras c) {
         alcance.resolverExpresion(c.condicion());
         tipos.tipoDeExpresion(c.condicion());
@@ -284,6 +293,7 @@ public class ValidadorSemantico {
         tabla.salirScope();
     }
 
+    /** Procesa un ciclo 'hacer-mientras'. */
     private void procesarCicloHacerMientras(NodoSentencia.CicloHacerMientras c) {
         tabla.entrarScope("hacer-mientras");
         flujo.entrarCiclo();

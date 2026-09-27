@@ -4,8 +4,12 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemor
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * Copia completa de un struct: p3 = p1
- * En C es un simple '=', pero semánticamente es una copia campo a campo.
+ * Cuarteta: p3 = p1
+ *
+ * Copia completa de una estructura a otra.
+ * Semánticamente es una copia campo a campo; en C es un simple '='.
+ * Ejemplo en .y: p3 = p1
+ * C generado:    p3 = p1;
  */
 public class AsignacionEstructura extends Cuarteta {
 

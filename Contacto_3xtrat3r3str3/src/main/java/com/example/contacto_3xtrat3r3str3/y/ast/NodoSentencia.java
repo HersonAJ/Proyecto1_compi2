@@ -7,6 +7,7 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 
 import java.util.List;
 
+// Nodos de sentencia del AST del lenguaje .y. Cada record sabe traducirse a cuartetas con aCodigoIntermedio()
 public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.DeclaracionVariable,
         NodoSentencia.DeclaracionArreglo,
@@ -32,6 +33,8 @@ public sealed interface NodoSentencia extends NodoAST permits
     void aCodigoIntermedio(ContextoTraduccion ctx);
 
     // DECLARACIONES
+
+    // 'entero x = 5'  ->  emite una asignación si hay inicializador
     record DeclaracionVariable(int linea, int columna, String tipo, String nombre,
                                NodoExpr inicializacion) implements NodoSentencia {
         @Override
@@ -49,6 +52,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'entero a[5] = {1,2,3,4,5}'  ->  emite una asignación por elemento
     record DeclaracionArreglo(int linea, int columna, String tipo, String nombre,
                               int tamano, List<NodoExpr> inicializacion) implements NodoSentencia {
         @Override
@@ -68,6 +72,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'entero m[3][3]'  ->  sin cuarteta: la declaración la maneja el recogedor.
     record DeclaracionMatriz(int linea, int columna, String tipo, String nombre,
                              int filas, int columnas,
                              List<List<NodoExpr>> inicializacion) implements NodoSentencia {
@@ -81,6 +86,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'Punto p = {10, 20}'  ->  asigna cada campo en orden posicional.
     record DeclaracionEstructura(int linea, int columna, String tipoEstructura, String nombre,
                                  List<NodoExpr> inicializacion) implements NodoSentencia {
         @Override
@@ -111,25 +117,22 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // Estructura declarada dentro de una función. No emite cuarteta
     record DeclaracionEstructuraLocal(int linea, int columna,
                                       NodoEstructura.Estructura estructura) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
-            return TipoNodoSentencia.DECLARACION_ESTRUCTURA_LOCAL; // nuevo valor en el enum
+            return TipoNodoSentencia.DECLARACION_ESTRUCTURA_LOCAL;
         }
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccion ctx) {
-            // Aquí no debería emitir C3D "ejecutable" — una definición de estructura
-            // no es una instrucción en tiempo de ejecución, es información de tipos.
-            // Probablemente esto solo necesita registrar la estructura en la tabla
-            // de símbolos del alcance actual (si tu validador semántico no lo hizo ya
-            // en una fase anterior). Déjalo vacío con un comentario si el registro
-            // ya ocurre antes de llegar aquí.
+            // No es una instrucción ejecutable; solo info de tipos.
         }
     }
 
     // ASIGNACION E INCREMENTO/DECREMENTO
+    // 'x = 5'  ->  emite 'x = 5'
     record Asignacion(int linea, int columna, NodoExpr destino, NodoExpr valor) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -147,6 +150,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'x++'  ->  emite 'x = x + 1'
     record IncrementoDecremento(int linea, int columna, String operador,
                                 String nombre) implements NodoSentencia {
         @Override
@@ -168,6 +172,8 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // CONDICIONAL
+
+    // 'si (cond) entonces ... sino ... contrario ...'  ->  etiquetas + saltos.
     record Condicional(int linea, int columna,
                        NodoExpr condicion,
                        List<NodoSentencia> cuerpoSi,
@@ -217,6 +223,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // ELEGIR
+    // 'elegir (x): caso 1: ... siempre: ...'  ->  etiquetas + saltos.
     record Elegir(int linea, int columna, NodoExpr expresion,
                   List<CasoElegir> casos, SiempreElegir siempre) implements NodoSentencia {
         @Override
@@ -266,6 +273,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // Caso individual dentro de 'elegir'. Lo gestiona Elegir.
     record CasoElegir(int linea, int columna, NodoExpr valor,
                       List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override
@@ -279,6 +287,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'siempre' (default) dentro de 'elegir'. Lo gestiona Elegir
     record SiempreElegir(int linea, int columna,
                          List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override
@@ -288,11 +297,11 @@ public sealed interface NodoSentencia extends NodoAST permits
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccion ctx) {
-            // Gestionado por Elegir.aCodigoIntermedio.
         }
     }
 
     // CICLOS
+    // 'para(entero i=0; i<10; i++): ...'  -> </10;>  init + etiquetas + salto atrás.
     record CicloPara(int linea, int columna,
                      String tipoInicializacion, String nombreVariable,
                      NodoExpr valorInicial, NodoExpr condicion,
@@ -341,6 +350,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'mientras(cond) hacer ...'  ->  etiqueta inicio + cond + cuerpo + salto atrás.
     record CicloMientras(int linea, int columna,
                          NodoExpr condicion,
                          List<NodoSentencia> cuerpo) implements NodoSentencia {
@@ -373,6 +383,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'hacer: ... mientras(cond)'  ->  cuerpo + etiqueta cond + salto si verdad.
     record CicloHacerMientras(int linea, int columna,
                               List<NodoSentencia> cuerpo,
                               NodoExpr condicion) implements NodoSentencia {
@@ -407,6 +418,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // RETORNO
+    // 'retornar expr'  ->  emite 'return expr'.
     record Retorno(int linea, int columna, NodoExpr valor) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -421,6 +433,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // FUNCIONES ESPECIALES
+    // 'imprimir(expr)'  ->  emite 'print expr'
     record Imprimir(int linea, int columna, NodoExpr expresion) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -434,6 +447,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'leer()'  ->  sin destino no emite nada
     record Leer(int linea, int columna) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -447,6 +461,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // CONTROL DE CICLOS
+    // 'romper'  ->  goto a la etiqueta de fin del ciclo activo.
     record Romper(int linea, int columna) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -464,6 +479,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    // 'continuar'  ->  goto a la etiqueta de continuación del ciclo activo.
     record Continuar(int linea, int columna) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {

@@ -5,13 +5,13 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemor
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 /**
- * printf con formato según el tipo:
- *   entero   -> %d
- *   flotante -> %f
- *   caracter -> %c
- *   cadena   -> %s
- *   bool     -> %d
- * Además agrega '\n' al final.
+ * Cuarteta: print x
+ *
+ * Imprime un valor en consola, con salto de línea al final.
+ * El formato de printf se elige según el tipo:
+ *   entero -> %d | flotante -> %f | caracter -> %c | cadena -> %s | bool -> %d
+ * Ejemplo en .y: imprimir("Hola")
+ * C generado:    printf("%s\n", "Hola");
  */
 public class Imprimir1 extends Cuarteta {
 
