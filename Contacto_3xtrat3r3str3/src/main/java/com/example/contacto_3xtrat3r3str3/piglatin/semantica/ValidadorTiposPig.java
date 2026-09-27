@@ -8,14 +8,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida tipos en PigLatin.
+ * Valida tipos e infiere expresiones en .pig.
  *
- * Maneja el mapeo entre tipos de PigLatin, Y? y Z:
- *   numerus ↔ entero ↔ int
- *   textum  ↔ cadena ↔ String
- *   decimalis ↔ flotante ↔ double
- *   littera ↔ caracter ↔ char
- *   bool    ↔ bool   ↔ boolean
+ * Validaciones:
+ *   - Índice de arreglo no numerus       -> tipoDeExpresion (ACCESO_ARRAY)
+ *   - Indexar algo que no es arreglo     -> tipoDeExpresion (ACCESO_ARRAY)
+ *   - Tipos incompatibles en binaria     -> tipoResultanteBinaria
+ *   - Tipos incompatibles en ++/--       -> tipoDeExpresion (INCREMENTO_DECREMENTO)
+ *   - Inicialización incompatible        -> validarInicializacion
+ *   - Inicialización de arreglo inválida -> validarInicializacionArreglo
+ *   - Asignación incompatible            -> validarAsignacion
+ *   - Condición no booleana              -> validarCondicionBooleana
  */
 public class ValidadorTiposPig {
 
@@ -38,6 +41,7 @@ public class ValidadorTiposPig {
     }
 
     // INFERENCIA DE TIPOS
+    /** Devuelve el tipo de una expresión. */
     public TipoResuelto tipoDeExpresion(NodoExpr expr) {
         if (expr == null) return null;
 
@@ -77,14 +81,12 @@ public class ValidadorTiposPig {
             case ACCESO_ATRIBUTO -> {
                 yield null;
             }
-
             case BINARIA -> {
                 NodoExpr.Binaria b = (NodoExpr.Binaria) expr;
                 TipoResuelto izq = tipoDeExpresion(b.izquierda());
                 TipoResuelto der = tipoDeExpresion(b.derecha());
                 yield tipoResultanteBinaria(b.operador(), izq, der, b.linea(), b.columna());
             }
-
             case INCREMENTO_DECREMENTO -> {
                 NodoExpr.IncrementoDecremento inc = (NodoExpr.IncrementoDecremento) expr;
                 TipoResuelto operando = tipoDeExpresion(inc.operando());
@@ -96,29 +98,26 @@ public class ValidadorTiposPig {
                 }
                 yield operando;
             }
-
             case LLAMADA_FUNCION -> {
                 NodoExpr.LlamadaFuncion l = (NodoExpr.LlamadaFuncion) expr;
                 Optional<TablaSimbolosPig.DefinicionFuncion> def = tabla.buscarFuncion(l.nombre());
                 if (def.isEmpty()) yield null;
                 yield new TipoResuelto(def.get().tipoRetorno(), 0);
             }
-
             case LLAMADA_METODO -> {
                 yield null;
             }
-
             case INSTANCIA_OBJETO -> {
                 NodoExpr.InstanciaObjeto inst = (NodoExpr.InstanciaObjeto) expr;
                 yield new TipoResuelto(inst.tipoClase(), 0);
             }
-
             case LISTA_LITERAL -> {
                 yield null;
             }
         };
     }
 
+    /** Calcula el tipo resultado de una operación binaria y reporta incompatibles. */
     private TipoResuelto tipoResultanteBinaria(String operador, TipoResuelto izq,
                                                TipoResuelto der, int linea, int columna) {
         if (izq == null || der == null) return null;
@@ -136,8 +135,6 @@ public class ValidadorTiposPig {
             }
             case "-", "*", "/" -> {
                 if (esNumerico(izq.base()) && esNumerico(der.base())) {
-                    if ("/".equals(operador) && esCeroLiteral(der)) {
-                    }
                     yield promocionNumerica(izq, der);
                 }
                 reportarIncompatible(operador, izq, der, linea, columna);
@@ -168,12 +165,14 @@ public class ValidadorTiposPig {
         };
     }
 
+    /** Promoción numérica: decimalis gana sobre numerus. */
     private TipoResuelto promocionNumerica(TipoResuelto izq, TipoResuelto der) {
         return (DECIMALIS.equals(izq.base()) || DECIMALIS.equals(der.base()))
                 ? new TipoResuelto(DECIMALIS, 0)
                 : new TipoResuelto(NUMERUS, 0);
     }
 
+    /** Reporta tipos incompatibles en una operación binaria. */
     private void reportarIncompatible(String operador, TipoResuelto izq, TipoResuelto der,
                                       int linea, int columna) {
         errores.add(new ErrorSemantico(linea, columna,
@@ -182,6 +181,7 @@ public class ValidadorTiposPig {
     }
 
     // COMPATIBILIDAD
+    /** True si un valor de tipo 'origen' puede asignarse a un destino. */
     public boolean esAsignable(TipoResuelto destino, TipoResuelto origen) {
         if (destino.dimensiones() != origen.dimensiones()) return false;
         if (destino.dimensiones() > 0) {
@@ -191,14 +191,14 @@ public class ValidadorTiposPig {
         return DECIMALIS.equals(destino.base()) && NUMERUS.equals(origen.base());
     }
 
-    /** Verifica si dos tipos son equivalentes entre lenguajes. */
+    /** True si dos tipos son equivalentes entre lenguajes (numerus ↔ int ↔ entero). */
     public boolean sonTiposEquivalentes(String a, String b) {
         if (a == null || b == null) return false;
         if (a.equals(b)) return true;
         return mapearTipo(a).equals(mapearTipo(b));
     }
 
-    //Normaliza un tipo a su forma canónica interna.
+    /** Normaliza un tipo a su forma canónica interna. */
     public String mapearTipo(String tipo) {
         if (tipo == null) return null;
         return switch (tipo) {
@@ -211,8 +211,8 @@ public class ValidadorTiposPig {
         };
     }
 
-
     // VALIDACIONES
+    /** Valida que una inicialización sea compatible con el tipo declarado. */
     public void validarInicializacion(NodoSentencia.DeclaracionVariable d) {
         if (d.inicializacion() == null) return;
 
@@ -227,6 +227,7 @@ public class ValidadorTiposPig {
         }
     }
 
+    /** Valida que los valores de un arreglo coincidan con su tipo base. */
     public void validarInicializacionArreglo(NodoSentencia.DeclaracionArreglo d) {
         if (d.inicializacion() == null || d.inicializacion().isEmpty()) return;
 
@@ -242,6 +243,7 @@ public class ValidadorTiposPig {
         }
     }
 
+    /** Valida que el valor de una asignación sea compatible con el destino. */
     public void validarAsignacion(NodoExpr destino, NodoExpr valor) {
         TipoResuelto tipoDestino = tipoDeExpresion(destino);
         TipoResuelto tipoValor = tipoDeExpresion(valor);
@@ -254,6 +256,7 @@ public class ValidadorTiposPig {
         }
     }
 
+    /** Valida que una condición sea de tipo bool. */
     public void validarCondicionBooleana(NodoExpr condicion) {
         TipoResuelto tipo = tipoDeExpresion(condicion);
         if (tipo != null && !BOOL.equals(tipo.base())) {
@@ -264,13 +267,10 @@ public class ValidadorTiposPig {
     }
 
     // HELPERS
+    /** True si el tipo es numérico en cualquier nomenclatura. */
     private boolean esNumerico(String tipo) {
         return NUMERUS.equals(tipo) || DECIMALIS.equals(tipo)
                 || "entero".equals(tipo) || "flotante".equals(tipo)
                 || "int".equals(tipo) || "double".equals(tipo);
-    }
-
-    private boolean esCeroLiteral(TipoResuelto t) {
-        return false;
     }
 }

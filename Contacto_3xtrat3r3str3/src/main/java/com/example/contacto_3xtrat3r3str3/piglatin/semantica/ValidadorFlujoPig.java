@@ -6,10 +6,11 @@ import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import java.util.List;
 
 /**
- * Valida reglas de flujo de control en PigLatin:
- *   - 'perge' (continue) solo dentro de ciclos.
- *   - 'interrumpe' (break) solo dentro de ciclos.
- *   - Código inalcanzable después de 'perge' o 'interrumpe'.
+ * Valida reglas de flujo de control en PigLatin.
+ *
+ * Validaciones:
+ *   - 'perge' / 'interrumpe' fuera de un ciclo   -> validarInterrupcion
+ *   - Código inalcanzable tras interrupción      -> validarCodigoInalcanzable
  */
 public class ValidadorFlujoPig {
 
@@ -24,8 +25,8 @@ public class ValidadorFlujoPig {
     public void entrarCiclo() { nivelCiclo++; }
     public void salirCiclo() { nivelCiclo--; }
 
-
     // INTERRUPCIONES
+    /** Verifica que 'perge' o 'interrumpe' estén dentro de un ciclo. */
     public void validarInterrupcion(NodoSentencia.InterrupcionCiclo i) {
         if (nivelCiclo == 0) {
             String nombre = i.tipo();
@@ -36,7 +37,11 @@ public class ValidadorFlujoPig {
     }
 
     // CODIGO INALCANZABLE
-    //Recorre un bloque y reporta las instrucciones que aparecen después de un 'perge' o 'interrumpe' VÁLIDO (dentro de un ciclo).
+    /**
+     * Reporta instrucciones inalcanzables después de un 'perge' o 'interrumpe' válido.
+     * Si la interrupción está fuera de un ciclo, no se reporta código inalcanzable
+     * porque esa interrupción ya generó su propio error.
+     */
     public void validarCodigoInalcanzable(List<NodoSentencia> bloque) {
         if (bloque == null) return;
 

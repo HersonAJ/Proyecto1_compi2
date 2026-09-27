@@ -6,13 +6,13 @@ import com.example.contacto_3xtrat3r3str3.y.semantica.error.ErrorSemantico;
 import java.util.List;
 
 /**
- * Valida que los identificadores usados existan.
+ * Validador de alcance para .pig.
  *
- * Detecta:
- *   - Identificador no declarado.
- *   - Función importada no declarada.
- *   - Estructura importada no declarada.
- *   - Clase importada no declarada.
+ * Validaciones:
+ *   - Identificador no declarado       -> resolverNombre
+ *   - Función no declarada             -> resolverFuncion
+ *   - Clase no declarada               -> resolverClase
+ *   - Tipo no declarado                -> resolverTipo
  */
 public class ValidadorAlcancePig {
 
@@ -25,71 +25,63 @@ public class ValidadorAlcancePig {
     }
 
     // RESOLUCION DE EXPRESIONES
+    /** Recorre una expresión resolviendo sus identificadores y tipos. */
     public void resolverExpresion(NodoExpr expr) {
         if (expr == null) return;
 
         switch (expr.tipoNodo()) {
             case IDENTIFICADOR -> resolverIdentificador((NodoExpr.Identificador) expr);
-
             case ACCESO_ARRAY -> {
                 NodoExpr.AccesoArray a = (NodoExpr.AccesoArray) expr;
                 resolverExpresion(a.arreglo());
                 resolverExpresion(a.indice());
             }
-
             case ACCESO_ATRIBUTO -> {
                 NodoExpr.AccesoAtributo a = (NodoExpr.AccesoAtributo) expr;
                 resolverExpresion(a.objeto());
             }
-
             case BINARIA -> {
                 NodoExpr.Binaria b = (NodoExpr.Binaria) expr;
                 resolverExpresion(b.izquierda());
                 resolverExpresion(b.derecha());
             }
-
             case INCREMENTO_DECREMENTO -> {
                 NodoExpr.IncrementoDecremento inc = (NodoExpr.IncrementoDecremento) expr;
                 resolverExpresion(inc.operando());
             }
-
             case LLAMADA_FUNCION -> {
                 NodoExpr.LlamadaFuncion l = (NodoExpr.LlamadaFuncion) expr;
                 resolverFuncion(l.nombre(), l.linea(), l.columna());
                 for (NodoExpr arg : l.argumentos()) resolverExpresion(arg);
             }
-
             case LLAMADA_METODO -> {
                 NodoExpr.LlamadaMetodo l = (NodoExpr.LlamadaMetodo) expr;
                 resolverExpresion(l.objeto());
                 for (NodoExpr arg : l.argumentos()) resolverExpresion(arg);
             }
-
             case INSTANCIA_OBJETO -> {
                 NodoExpr.InstanciaObjeto inst = (NodoExpr.InstanciaObjeto) expr;
                 resolverClase(inst.tipoClase(), inst.linea(), inst.columna());
                 for (NodoExpr arg : inst.argumentos()) resolverExpresion(arg);
             }
-
             case LISTA_LITERAL -> {
                 for (NodoExpr e : ((NodoExpr.ListaLiteral) expr).elementos()) {
                     resolverExpresion(e);
                 }
             }
-
             case LITERAL_ENTERO, LITERAL_DECIMAL, LITERAL_TEXTO,
                  LITERAL_CARACTER, LITERAL_BOOL -> {
-                // Nada que resolver.
             }
         }
     }
 
-    // RESOLUCIONES ESPECÍFICAS
-
+    // RESOLUCIONES ESPECIFICAS
+    /** Resuelve un identificador buscando su nombre en la tabla. */
     public void resolverIdentificador(NodoExpr.Identificador id) {
         resolverNombre(id.nombre(), id.linea(), id.columna());
     }
 
+    /** Reporta error si el nombre no es variable, función, clase ni estructura. */
     public void resolverNombre(String nombre, int linea, int columna) {
         if (tabla.buscarVariable(nombre).isEmpty()) {
             // Si es una función o clase importada, no es error.
@@ -103,6 +95,7 @@ public class ValidadorAlcancePig {
         }
     }
 
+    /** Verifica que la función importada exista en la tabla. */
     public void resolverFuncion(String nombre, int linea, int columna) {
         if (tabla.buscarFuncion(nombre).isEmpty()) {
             errores.add(new ErrorSemantico(linea, columna,
@@ -111,6 +104,7 @@ public class ValidadorAlcancePig {
         }
     }
 
+    /** Verifica que la clase importada exista en la tabla. */
     public void resolverClase(String nombre, int linea, int columna) {
         if (tabla.buscarClase(nombre).isEmpty()) {
             errores.add(new ErrorSemantico(linea, columna,
@@ -119,6 +113,7 @@ public class ValidadorAlcancePig {
         }
     }
 
+    /** Verifica que un tipo sea primitivo, estructura o clase importada. */
     public void resolverTipo(String tipo, int linea, int columna) {
         if (tipo == null) return;
 
@@ -135,6 +130,7 @@ public class ValidadorAlcancePig {
     }
 
     // HELPERS
+    /** True si el tipo es primitivo de .pig. */
     private boolean esTipoPrimitivo(String tipo) {
         return "numerus".equals(tipo)
                 || "textum".equals(tipo)

@@ -34,6 +34,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     void aCodigoIntermedio(ContextoTraduccionPig ctx);
 
     // DECLARACIONES
+    /** 'esto x : tipo valor'  ->  emite una asignación si hay inicializador. */
     record DeclaracionVariable(int linea, int columna, String tipo, String nombre,
                                NodoExpr inicializacion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.DECLARACION_VARIABLE; }
@@ -41,28 +42,24 @@ public sealed interface NodoSentencia extends NodoAST permits
         @Override
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             if (inicializacion == null) return;
-
             AccesoMemoria valorAcc = inicializacion.aCodigoIntermedio(ctx);
-
             String tipoC = TipoPigC.baseAC(tipo, !TipoPigC.esPrimitivo(tipo));
             AccesoVariable destinoAcc = new AccesoVariable(nombre, tipoC);
-
             ctx.getGestor().emitir(new AsignacionVariable(destinoAcc, valorAcc));
         }
     }
 
+    /** 'series a[N] : tipo { ... }'  ->  la declaración la maneja el recogedor. */
     record DeclaracionArreglo(int linea, int columna, String tipo, String nombre,
                               int tamano, List<NodoExpr> inicializacion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.DECLARACION_ARREGLO; }
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
-            // La declaración del arreglo (con o sin inicializador) la hace el
-            // recogedor de variables (VariableLocalC / VariableGlobalC).
-            // Aquí NO emitimos nada.
         }
     }
 
+    /** 'esto x : Tipo { ... }'  ->  asigna cada campo en orden posicional. */
     record DeclaracionStruct(int linea, int columna, String tipo, String nombre,
                              List<NodoExpr> inicializacion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.DECLARACION_STRUCT; }
@@ -70,13 +67,10 @@ public sealed interface NodoSentencia extends NodoAST permits
         @Override
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             if (inicializacion.isEmpty()) return;
-
             var estOpt = ctx.getTabla().buscarEstructura(tipo);
             if (estOpt.isEmpty()) return;
-
             var est = estOpt.get();
             var nombresCampos = new ArrayList<>(est.atributos().keySet());
-
             for (int i = 0; i < inicializacion.size() && i < nombresCampos.size(); i++) {
                 AccesoMemoria valor = inicializacion.get(i).aCodigoIntermedio(ctx);
                 AccesoVariable base = new AccesoVariable(nombre, "struct " + tipo);
@@ -87,6 +81,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // ASIGNACIONES
+    /** 'x = 5'  ->  emite 'x = 5'. */
     record Asignacion(int linea, int columna, NodoExpr destino, NodoExpr valor) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ASIGNACION; }
 
@@ -98,6 +93,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** 'x++' / 'x--'  ->  emite 'x = x ± 1'. */
     record IncrementoDecremento(int linea, int columna, String operador,
                                 NodoExpr operando, boolean prefijo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.INCREMENTO_DECREMENTO; }
@@ -112,6 +108,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // CONDICIONAL
+    /** 'si ... aliter ... aliter ...'  ->  etiquetas + saltos. */
     record Condicional(int linea, int columna, NodoExpr condicion,
                        List<NodoSentencia> cuerpoSi,
                        List<RamaAliter> ramasAliter,
@@ -129,12 +126,9 @@ public sealed interface NodoSentencia extends NodoAST permits
             // Rama si
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
             g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "numerus"), lSiguiente));
-
             for (NodoSentencia s : cuerpoSi) s.aCodigoIntermedio(ctx);
             g.emitir(new Salto(lFin));
-
             g.emitir(new DefinicionEtiqueta(lSiguiente));
-
             // Ramas aliter con condición
             for (RamaAliter rama : ramasAliter) {
                 int lSiguienteRama = c.siguienteEtiqueta();
@@ -156,10 +150,12 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** Rama 'aliter (cond)' con su cuerpo. La gestiona Condicional. */
     record RamaAliter(int linea, int columna, NodoExpr condicion, List<NodoSentencia> cuerpo) {
     }
 
     // CICLOS
+    /** 'dum (cond) { ... } finis'  ->  etiqueta inicio + cond + cuerpo + salto atrás. */
     record CicloDum(int linea, int columna, NodoExpr condicion,
                     List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CICLO_DUM; }
@@ -168,7 +164,6 @@ public sealed interface NodoSentencia extends NodoAST permits
         public void aCodigoIntermedio(ContextoTraduccionPig ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
             var c = g.getContador();
-
             int lInicio = c.siguienteEtiqueta();
             int lRomper = c.siguienteEtiqueta();
 
@@ -176,7 +171,6 @@ public sealed interface NodoSentencia extends NodoAST permits
 
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
             g.emitir(new Condicional1(condAcc, "==", new LiteralPig(0, "numerus"), lRomper));
-
             g.entrarCiclo(new ContextoCiclo(lInicio, lRomper));
             for (NodoSentencia s : cuerpo) s.aCodigoIntermedio(ctx);
             g.salirCiclo();
@@ -186,6 +180,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** 'facere { ... } dum (cond);'  ->  cuerpo + etiqueta cond + salto si verdad. */
     record CicloFacere(int linea, int columna, List<NodoSentencia> cuerpo,
                        NodoExpr condicion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CICLO_FACERE; }
@@ -214,6 +209,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** 'per (init; cond; act) { ... }'  ->  init + etiquetas + salto atrás. */
     record CicloPer(int linea, int columna, NodoSentencia inicializacion,
                     NodoExpr condicion, NodoSentencia actualizacion,
                     List<NodoSentencia> cuerpo) implements NodoSentencia {
@@ -225,7 +221,6 @@ public sealed interface NodoSentencia extends NodoAST permits
             var c = g.getContador();
 
             if (inicializacion != null) inicializacion.aCodigoIntermedio(ctx);
-
             int lInicio = c.siguienteEtiqueta();
             int lContinuar = c.siguienteEtiqueta();
             int lRomper = c.siguienteEtiqueta();
@@ -250,6 +245,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // LECTURA / ESCRITURA
+    /** 'var <<'  o  '<<'  ->  LeerPig (con destino o a temporal descartable). */
     record Lectura(int linea, int columna, String variable) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LECTURA; }
 
@@ -273,6 +269,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** '>> a >> b >> c;'  ->  un ImprimirPig por cada valor. */
     record Escritura(int linea, int columna, List<NodoExpr> valores) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ESCRITURA; }
@@ -286,6 +283,7 @@ public sealed interface NodoSentencia extends NodoAST permits
             }
         }
 
+        /** Determina el tipo .pig del valor para elegir el formato de printf. */
         private String tipoPigLatinDe(NodoExpr expr, ContextoTraduccionPig ctx) {
             if (expr instanceof NodoExpr.LiteralEntero) return "numerus";
             if (expr instanceof NodoExpr.LiteralDecimal) return "decimalis";
@@ -298,13 +296,11 @@ public sealed interface NodoSentencia extends NodoAST permits
                         .map(s -> s.tipo())
                         .orElse("numerus");
             }
-
             if (expr instanceof NodoExpr.LlamadaFuncion llamada) {
                 return ctx.getTabla().buscarFuncion(llamada.nombre())
                         .map(f -> f.tipoRetorno())
                         .orElse("numerus");
             }
-
             if (expr instanceof NodoExpr.LlamadaMetodo llamada) {
                 try {
                     if (llamada.objeto() instanceof NodoExpr.Identificador id) {
@@ -321,7 +317,6 @@ public sealed interface NodoSentencia extends NodoAST permits
                         }
                     }
                 } catch (Exception e) {
-                    // ignorar
                 }
                 return "numerus";
             }
@@ -331,6 +326,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // INTERRUPCION DE CICLO
+    /** 'perge' o 'interrumpe'  ->  goto a la etiqueta del ciclo activo. */
     record InterrupcionCiclo(int linea, int columna, String tipo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.INTERRUPCION_CICLO; }
 
@@ -349,7 +345,8 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // LLAMADA A FUNCION COMO SENTENCIA
+    // LLAMADAS COMO SENTENCIA
+    /** Llamada a función suelta  ->  evalúa y descarta. */
     record LlamadaFuncionSentencia(int linea, int columna, NodoExpr.LlamadaFuncion llamada) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LLAMADA_FUNCION_SENTENCIA; }
 
@@ -359,6 +356,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** Llamada a metodo suelta  ->  evalúa y descarta. */
     record LlamadaMetodoSentencia(int linea, int columna, NodoExpr.LlamadaMetodo llamada) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LLAMADA_METODO_SENTENCIA; }
 
@@ -367,5 +365,4 @@ public sealed interface NodoSentencia extends NodoAST permits
             llamada.aCodigoIntermedio(ctx);
         }
     }
-
 }

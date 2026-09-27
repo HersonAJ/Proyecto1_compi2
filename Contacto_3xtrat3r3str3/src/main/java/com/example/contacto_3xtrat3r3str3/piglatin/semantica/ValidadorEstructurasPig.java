@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida el uso correcto de estructuras importadas de Y?:
- *   - Inicialización de estructura con cantidad correcta de valores.
- *   - Inicialización de estructura con tipos correctos.
- *   - Acceso a atributos existentes.
- *   - Acceso a atributos en estructuras anidadas.
+ * Valida el uso de estructuras importadas de .y.
+ *
+ * Validaciones:
+ *   - Cantidad incorrecta en inicialización    -> validarInicializacion
+ *   - Tipo incompatible en inicialización      -> validarInicializacion
+ *   - Acceso a atributo en algo que no es struct -> validarAccesoAtributo
+ *   - Atributo inexistente                     -> validarAccesoAtributo
  */
 public class ValidadorEstructurasPig {
 
@@ -29,10 +31,10 @@ public class ValidadorEstructurasPig {
     }
 
     // INICIALIZACION DE ESTRUCTURA
-
-    //Valida la inicialización de una estructura: esto miDir : Direccion {"Calle Real", 42};
-    //Verifica: - La cantidad de valores coincide con la cantidad de atributos. - Cada valor es asignable al tipo del atributo correspondiente.
-
+    /**
+     * Valida la inicialización: 'esto miDir : Direccion {"Calle Real", 42}'
+     * Verifica cantidad y tipo de cada valor contra los atributos.
+     */
     public void validarInicializacion(NodoSentencia.DeclaracionStruct d) {
         if (d.inicializacion() == null || d.inicializacion().isEmpty()) {
             return;
@@ -47,7 +49,7 @@ public class ValidadorEstructurasPig {
         List<String> tiposAtributos = List.copyOf(def.atributos().values());
         List<String> nombresAtributos = List.copyOf(def.atributos().keySet());
 
-        // Cantidad
+        // Verificar cantidad.
         if (d.inicializacion().size() != tiposAtributos.size()) {
             errores.add(new ErrorSemantico(d.linea(), d.columna(),
                     "Cantidad incorrecta en inicialización de estructura",
@@ -56,7 +58,7 @@ public class ValidadorEstructurasPig {
             return;
         }
 
-        // Tipos
+        // Verificar tipo de cada valor.
         for (int i = 0; i < d.inicializacion().size(); i++) {
             NodoExpr valor = d.inicializacion().get(i);
             String tipoEsperado = tiposAtributos.get(i);
@@ -76,21 +78,20 @@ public class ValidadorEstructurasPig {
     }
 
     // ACCESO A ATRIBUTO
-
-    //Valida el acceso a un atributo: miDir.calle
-    //Verifica: El objeto es una estructura. El atributo existe. Devuelve el tipo del atributo.
-
+    /**
+     * Verifica que el objeto sea estructura y que el atributo exista.
+     * Devuelve el tipo del atributo.
+     */
     public ValidadorTiposPig.TipoResuelto validarAccesoAtributo(NodoExpr.AccesoAtributo acceso) {
-        // Resolver el tipo del objeto base
+        // Resolver el tipo del objeto base.
         ValidadorTiposPig.TipoResuelto tipoObjeto = tipos.tipoDeExpresion(acceso.objeto());
 
         if (tipoObjeto == null) {
-            // El objeto puede ser una estructura. Intentar resolverlo por nombre.
             tipoObjeto = resolverTipoDeEstructura(acceso.objeto());
             if (tipoObjeto == null) return null;
         }
 
-        // Buscar la estructura
+        // Buscar la estructura.
         Optional<TablaSimbolosPig.DefinicionEstructura> defOpt =
                 tabla.buscarEstructura(tipoObjeto.base());
 
@@ -102,7 +103,7 @@ public class ValidadorEstructurasPig {
             return null;
         }
 
-        // Buscar el atributo
+        // Buscar el atributo.
         TablaSimbolosPig.DefinicionEstructura def = defOpt.get();
         String tipoAtributo = def.atributos().get(acceso.atributo());
 
@@ -118,11 +119,8 @@ public class ValidadorEstructurasPig {
     }
 
     // HELPERS
-
-    //Intenta resolver el tipo de una expresión como el nombre de una estructura.
     private ValidadorTiposPig.TipoResuelto resolverTipoDeEstructura(NodoExpr expr) {
         if (expr instanceof NodoExpr.Identificador id) {
-            // Buscar la variable en la tabla
             Optional<TablaSimbolosPig.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
             if (simbolo.isPresent()) {
                 TablaSimbolosPig.SimboloVariable v = simbolo.get();

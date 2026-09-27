@@ -8,9 +8,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida reglas específicas de asignaciones en PigLatin:
- *   - El destino debe ser un lvalue (variable, arreglo[índice], objeto.atributo).
- *   - No se puede asignar a un arreglo completo.
+ * Valida reglas específicas de asignaciones en PigLatin.
+ *
+ * Validaciones:
+ *   - Destino no es asignable                 -> validarDestino
+ *   - Asignación a función importada          -> validarIdentificadorComoDestino
+ *   - Asignación a clase importada            -> validarIdentificadorComoDestino
+ *   - Asignación a estructura importada       -> validarIdentificadorComoDestino
+ *   - Asignación a arreglo completo           -> validarIdentificadorComoDestino
  */
 public class ValidadorAsignacionesPig {
 
@@ -22,20 +27,17 @@ public class ValidadorAsignacionesPig {
         this.errores = errores;
     }
 
-    //Valida que el destino de una asignación sea un lvalue válido.
+    /** Valida que el destino de una asignación sea asignable. */
     public void validarDestino(NodoSentencia.Asignacion asignacion) {
         NodoExpr destino = asignacion.destino();
-
         // Caso 1: destino es un identificador simple (variable).
         if (destino instanceof NodoExpr.Identificador id) {
             validarIdentificadorComoDestino(id);
         }
-
         // Caso 2: destino es AccesoArray (arreglo[índice]) -> válido.
         // Caso 3: destino es AccesoAtributo (objeto.atributo) -> válido.
-
         // Caso 4: cualquier otra expresión (literal, binaria, etc.) -> inválido.
-        if (!esLValue(destino)) {
+        if (!esDestinoValido(destino)) {
             errores.add(new ErrorSemantico(destino.linea(), destino.columna(),
                     "Destino inválido",
                     "El lado izquierdo de una asignación debe ser una variable, "
@@ -43,7 +45,7 @@ public class ValidadorAsignacionesPig {
         }
     }
 
-    //Valida que un identificador simple pueda ser destino. No puede ser: arreglo completo, función, clase, estructura, objeto.
+    /** Verifica que un identificador simple pueda ser destino de asignación. */
     private void validarIdentificadorComoDestino(NodoExpr.Identificador id) {
         String nombre = id.nombre();
 
@@ -87,8 +89,8 @@ public class ValidadorAsignacionesPig {
         }
     }
 
-    //Determina si una expresión es un lvalue válido.
-    private boolean esLValue(NodoExpr expr) {
+    /** True si la expresión puede recibir una asignación (variable, arreglo o atributo). */
+    private boolean esDestinoValido(NodoExpr expr) {
         if (expr == null) return false;
         return switch (expr.tipoNodo()) {
             case IDENTIFICADOR, ACCESO_ARRAY, ACCESO_ATRIBUTO -> true;

@@ -9,7 +9,6 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.LiteralP
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasPig.PromocionTiposPig;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.c.pig.TipoPigC;
 import com.example.contacto_3xtrat3r3str3.piglatin.semantica.TablaSimbolosPig;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +32,7 @@ public sealed interface NodoExpr extends NodoAST permits
     AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx);
 
     // LITERALES
+    /** Entero  ->  LiteralPig con tipo "numerus". */
     record LiteralEntero(int linea, int columna, int valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_ENTERO; }
 
@@ -41,6 +41,8 @@ public sealed interface NodoExpr extends NodoAST permits
             return new LiteralPig(valor, "numerus");
         }
     }
+
+    /** Decimal  ->  LiteralPig con tipo "decimalis". */
     record LiteralDecimal(int linea, int columna, double valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_DECIMAL; }
 
@@ -50,6 +52,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** Texto  ->  LiteralPig con tipo "textum". */
     record LiteralTexto(int linea, int columna, String valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_TEXTO; }
 
@@ -59,6 +62,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** Caracter  ->  LiteralPig con tipo "littera". */
     record LiteralCaracter(int linea, int columna, char valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CARACTER; }
 
@@ -68,6 +72,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'verum' / 'falsus'  ->  LiteralPig con tipo "bool". */
     record LiteralBool(int linea, int columna, boolean valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_BOOL; }
 
@@ -77,7 +82,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // para '{1, 2, 3}' dentro de expresiones
+    /** '{1, 2, 3}'  ->  solo válido como inicializador de arreglo o struct. */
     record ListaLiteral(int linea, int columna, List<NodoExpr> elementos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LISTA_LITERAL; }
 
@@ -90,6 +95,7 @@ public sealed interface NodoExpr extends NodoAST permits
     }
 
     // ACCESOS
+    /** 'x'  ->  AccesoVariable con su tipo en C (o puntero si es objeto). */
     record Identificador(int linea, int columna, String nombre) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.IDENTIFICADOR; }
 
@@ -107,6 +113,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'a[i]'  ->  AccesoArreglo con su tipo de elemento inferido. */
     record AccesoArray(int linea, int columna, NodoExpr arreglo, NodoExpr indice) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ARRAY; }
         @Override
@@ -118,6 +125,7 @@ public sealed interface NodoExpr extends NodoAST permits
             return new AccesoArreglo(base, indiceAcc, tipoElemento);
         }
 
+        /** Deduce el tipo del elemento desde el arreglo base. */
         private String obtenerTipoElemento(ContextoTraduccionPig ctx, NodoExpr baseExpr) {
             if (baseExpr instanceof Identificador id) {
                 return ctx.getTabla().buscarVariable(id.nombre())
@@ -128,13 +136,13 @@ public sealed interface NodoExpr extends NodoAST permits
                 return obtenerTipoElemento(ctx, inner.arreglo());
             }
             if (baseExpr instanceof AccesoAtributo atr) {
-                // Buscar el tipo del campo
-                return "numerus"; // fallback por ahora
+                return "numerus";
             }
             return "numerus";
         }
     }
 
+    /** 'obj.campo'  ->  AccesoAtributo1 (con '->' si es objeto). */
     record AccesoAtributo(int linea, int columna, NodoExpr objeto, String atributo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ATRIBUTO; }
         @Override
@@ -146,17 +154,18 @@ public sealed interface NodoExpr extends NodoAST permits
             return new AccesoAtributo1(base, atributo, porPuntero, tipoCampo);
         }
 
+        /** True si la base es un objeto (clase de .z) y se accede con '->'. */
         private boolean esBaseObjeto(ContextoTraduccionPig ctx, NodoExpr baseExpr) {
             if (baseExpr instanceof Identificador id) {
                 return ctx.getTabla().buscarVariable(id.nombre())
                         .map(s -> s.esObjeto())
                         .orElse(false);
             }
-            return false; // fallback: tratar como struct por valor
+            return false;
         }
 
+        /** Busca el tipo del campo en la estructura o clase correspondiente. */
         private String obtenerTipoCampo(ContextoTraduccionPig ctx, NodoExpr baseExpr, String campo) {
-            // Resolver el tipo de la base
             if (baseExpr instanceof Identificador id) {
                 var v = ctx.getTabla().buscarVariable(id.nombre());
                 if (v.isEmpty()) return "numerus";
@@ -181,15 +190,14 @@ public sealed interface NodoExpr extends NodoAST permits
     }
 
     // OPERACIONES
+    /** 'a + b', 'a == b', ...  ->  promociones / strcmp + OperacionBinaria. */
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.BINARIA; }
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             AccesoMemoria izq = izquierda.aCodigoIntermedio(ctx);
             AccesoMemoria der = derecha.aCodigoIntermedio(ctx);
-
             // Caso especial: == y != con textum -> strcmp
             boolean hayTexto = "textum".equals(izq.getTipo()) || "textum".equals(der.getTipo());
             boolean esComparacion = "==".equals(operador) || "!=".equals(operador);
@@ -227,6 +235,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'x++', 'x--', '++x', '--x'  ->  x = x ± 1 como OperacionBinaria. */
     record IncrementoDecremento(int linea, int columna, String operador,
                                 NodoExpr operando, boolean prefijo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INCREMENTO_DECREMENTO; }
@@ -239,15 +248,13 @@ public sealed interface NodoExpr extends NodoAST permits
             String opBinario = "++".equals(operador) ? "+" : "-";
             AccesoMemoria uno = new LiteralPig(1, "numerus");
 
-            // x = x ± 1
             g.emitir(new OperacionBinaria(op, op, opBinario, uno));
-
-            // Devolvemos el propio acceso (el valor actualizado ya está en x).
             return op;
         }
     }
 
     // LLAMADAS Y OBJETOS
+    /** 'calcular(x)'  ->  Llamada a función de .y  */
     record LlamadaFuncion(int linea, int columna, String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_FUNCION; }
         @Override
@@ -268,11 +275,11 @@ public sealed interface NodoExpr extends NodoAST permits
             }
             var funcion = funOpt.get();
 
-            // 3. Nombre C: igual al nombre .y (sin sobrecarga).
+            // 3. Nombre C: igual al nombre .y
             String nombreC = nombre;
 
-            // 4. ¿Tiene retorno?
-            String tipoRetorno = funcion.tipoRetorno();   // null si void
+            // 4. Emitir según retorno.
+            String tipoRetorno = funcion.tipoRetorno();
             if (tipoRetorno == null) {
                 g.emitir(new Llamada(null, nombreC, args));
                 return null;
@@ -285,24 +292,22 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'p.metodo(args)'  ->  LlamadaMetodo1 con el receptor como primer argumento. */
     record LlamadaMetodo(int linea, int columna, NodoExpr objeto,
                          String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_METODO; }
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             // 1. Evaluar receptor y argumentos.
             AccesoMemoria receptorAcc = objeto.aCodigoIntermedio(ctx);
             List<AccesoMemoria> args = new ArrayList<>();
             for (NodoExpr arg : argumentos) {
                 args.add(arg.aCodigoIntermedio(ctx));
             }
-
             // 2. Nombre de la clase del receptor.
             String clase = obtenerNombreClase(receptorAcc, ctx);
-
-            // 3. Buscar la firma del método.
+            // 3. Buscar la firma del metodo.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
 
@@ -313,7 +318,6 @@ public sealed interface NodoExpr extends NodoAST permits
             }
             var defClase = claseOpt.get();
 
-            // Buscar el método por nombre y tipos
             var firmaOpt = defClase.metodos().stream()
                     .filter(f -> f.nombre().equals(nombre)
                             && tiposCompatibles(f.parametros(), tiposArgs))
@@ -341,6 +345,7 @@ public sealed interface NodoExpr extends NodoAST permits
             }
         }
 
+        /** Extrae 'Nombre' de 'struct Nombre*' o 'struct Nombre'. */
         private static String obtenerNombreClase(AccesoMemoria receptor, ContextoTraduccionPig ctx) {
             String tipo = receptor.getTipo();
             if (tipo.startsWith("struct ") && tipo.endsWith("*")) {
@@ -352,38 +357,29 @@ public sealed interface NodoExpr extends NodoAST permits
             return tipo;
         }
 
-        private static boolean tiposCompatibles(List<TablaSimbolosPig.Parametro> params,
-                                                List<String> tiposArgs) {
-            if (params.size() != tiposArgs.size()) return false;
-            for (int i = 0; i < params.size(); i++) {
-                if (!params.get(i).tipo().equals(tiposArgs.get(i))) return false;
-            }
-            return true;
-        }
-
+        /** Nombre C: Clase_metodo_tipo1_tipo2. */
         private static String construirNombreC(String clase, String metodo, TablaSimbolosPig.Firma firma) {
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append('_').append(metodo);
             for (TablaSimbolosPig.Parametro p : firma.parametros()) {
-                sb.append('_').append(tipoPigAZ(p.tipo()));   // ← TRADUCIR
+                sb.append('_').append(tipoPigAZ(p.tipo()));
             }
             return sb.toString();
         }
     }
 
+    /** 'novus Clase(args)'  ->  NewObjeto (malloc + constructor). */
     record InstanciaObjeto(int linea, int columna, String tipoClase, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INSTANCIA_OBJETO; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             // 1. Evaluar argumentos.
             List<AccesoMemoria> args = new ArrayList<>();
             for (NodoExpr arg : argumentos) {
                 args.add(arg.aCodigoIntermedio(ctx));
             }
-
             // 2. Buscar la clase.
             var claseOpt = ctx.getTabla().buscarClase(tipoClase);
             if (claseOpt.isEmpty()) {
@@ -391,7 +387,6 @@ public sealed interface NodoExpr extends NodoAST permits
                         "Clase no encontrada: '" + tipoClase + "' (línea " + linea + ")");
             }
             var defClase = claseOpt.get();
-
             // 3. Resolver el constructor.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
@@ -404,20 +399,18 @@ public sealed interface NodoExpr extends NodoAST permits
                                 + "' (línea " + linea + ")");
             }
             var firma = firmaOpt.get();
-
             // 4. Nombre C del constructor.
             String nombreConstructorC = construirNombreConstructorC(tipoClase, firma);
-
             // 5. Temporal del tipo Clase*.
             String tipoC = "struct " + tipoClase + "*";
             int idT = g.getContador().siguienteTemporal(tipoC);
             AccesoTemporal t = new AccesoTemporal(idT, tipoC);
-
             // 6. Emitir.
             g.emitir(new NewObjeto(t, tipoClase, nombreConstructorC, args));
             return t;
         }
 
+        /** Nombre C: Clase_constructor_tipo1_tipo2. */
         private static String construirNombreConstructorC(String clase, TablaSimbolosPig.Firma firma) {
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append("_constructor");
@@ -426,19 +419,10 @@ public sealed interface NodoExpr extends NodoAST permits
             }
             return sb.toString();
         }
-
-        private static String tipoPigAZ(String tipoPig) {
-            return switch (tipoPig) {
-                case "numerus"   -> "int";
-                case "decimalis" -> "double";
-                case "littera"   -> "char";
-                case "textum"    -> "String";
-                case "bool"      -> "boolean";
-                default          -> tipoPig;
-            };
-        }
     }
 
+    // HELPERS COMPARTIDOS
+    /** Traduce un tipo de .y a su equivalente en .pig. */
     private static String tipoYAPig(String tipoY) {
         if (tipoY == null) return null;
         return switch (tipoY) {
@@ -451,6 +435,7 @@ public sealed interface NodoExpr extends NodoAST permits
         };
     }
 
+    /** True si los tipos de argumentos coinciden con los de los parámetros. */
     static boolean tiposCompatibles(List<TablaSimbolosPig.Parametro> params,
                                     List<String> tiposArgs) {
         if (params.size() != tiposArgs.size()) return false;
@@ -460,6 +445,7 @@ public sealed interface NodoExpr extends NodoAST permits
         return true;
     }
 
+    /** Traduce un tipo de .pig a su nomenclatura en .z. */
     private static String tipoPigAZ(String tipoPig) {
         return switch (tipoPig) {
             case "numerus"   -> "int";
@@ -467,7 +453,7 @@ public sealed interface NodoExpr extends NodoAST permits
             case "littera"   -> "char";
             case "textum"    -> "String";
             case "bool"      -> "boolean";
-            default          -> tipoPig;   
+            default          -> tipoPig;
         };
     }
 }

@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Valida el uso correcto de objetos importados de Zetariano:
- *   - Instanciación de objetos con argumentos correctos.
- *   - Llamada a métodos con argumentos correctos.
- *   - Acceso a atributos de objetos.
+ * Valida el uso de objetos importados de .z.
  *
- * Los objetos en PigLatin usan los tipos de Zetariano (int, double, String, etc.)
- * y el mapeo se hace en ValidadorTiposPig.
+ * Validaciones:
+ *   - Constructor no compatible con los argumentos   -> validarInstanciacion
+ *   - Metodo no compatible con los argumentos        -> validarLlamadaMetodo
+ *   - Llamada a metodo sobre algo que no es objeto   -> validarLlamadaMetodo
+ *   - Atributo de objeto inexistente                 -> validarAccesoAtributoObjeto
  */
 public class ValidadorObjetosPig {
 
@@ -31,32 +31,32 @@ public class ValidadorObjetosPig {
     }
 
     // INSTANCIACION DE OBJETOS
-
-    //Valida la instanciación de un objeto: novus Persona("Carlos", 25)
-    //Verifica: La clase existe (ya validado en ValidadorAlcancePig). Existe un constructor que coincida con los argumentos.
+    // Verifica que exista un constructor compatible con los argumentos
     public void validarInstanciacion(NodoExpr.InstanciaObjeto inst) {
         Optional<TablaSimbolosPig.DefinicionClase> claseOpt = tabla.buscarClase(inst.tipoClase());
         if (claseOpt.isEmpty()) return;
 
         TablaSimbolosPig.DefinicionClase clase = claseOpt.get();
 
-        // Construir lista de tipos de argumentos
+        // Construir lista de tipos de argumentos.
         List<ValidadorTiposPig.TipoResuelto> tiposArgs = new ArrayList<>();
         for (NodoExpr arg : inst.argumentos()) {
             tiposArgs.add(tipos.tipoDeExpresion(arg));
         }
 
-        // Buscar un constructor que coincida
-        TablaSimbolosPig.Firma firma = resolverSobrecarga(
+        // Buscar un constructor que coincida.
+        resolverSobrecarga(
                 clase.constructores(), tiposArgs,
                 inst.linea(), inst.columna(), clase.nombre(), "Constructor");
     }
 
     // LLAMADA A METODO
 
-     //Valida la llamada a un metodo: miObjeto.getNombre() miObjeto.saludar("hola")
-     //Verifica: - El objeto es de una clase conocida. - Existe un metodo con ese nombre y argumentos compatibles.
-     //Devuelve el tipo de retorno del metodo.
+    /**
+     * Valida 'miObjeto.getNombre()'.
+     * Verifica que el objeto sea de una clase conocida y que exista un metodo compatible.
+     * Devuelve el tipo de retorno del metodo.
+     */
     public ValidadorTiposPig.TipoResuelto validarLlamadaMetodo(NodoExpr.LlamadaMetodo llamada) {
         // 1. Resolver el tipo del objeto.
         ValidadorTiposPig.TipoResuelto tipoObjeto = tipos.tipoDeExpresion(llamada.objeto());
@@ -96,8 +96,10 @@ public class ValidadorObjetosPig {
     }
 
     // ACCESO A ATRIBUTO DE OBJETO
-
-    //Valida el acceso a un atributo de un objeto: miObjeto.nombre  Devuelve el tipo del atributo.
+    /**
+     * Valida 'miObjeto.nombre'.
+     * Devuelve el tipo del atributo.
+     */
     public ValidadorTiposPig.TipoResuelto validarAccesoAtributoObjeto(NodoExpr.AccesoAtributo acceso) {
         ValidadorTiposPig.TipoResuelto tipoObjeto = tipos.tipoDeExpresion(acceso.objeto());
 
@@ -126,7 +128,7 @@ public class ValidadorObjetosPig {
     }
 
     // HELPERS
-    //Resuelve sobrecargas: encuentra la firma que coincide con los tipos de argumentos
+    /** Resuelve la sobrecarga que coincide con los tipos de argumentos. */
     private TablaSimbolosPig.Firma resolverSobrecarga(List<TablaSimbolosPig.Firma> firmas,
                                                       List<ValidadorTiposPig.TipoResuelto> tiposArgs,
                                                       int linea, int columna,
@@ -165,6 +167,7 @@ public class ValidadorObjetosPig {
         return null;
     }
 
+    /** Compara firma y argumentos por igualdad exacta de tipos. */
     private boolean coincideExacto(TablaSimbolosPig.Firma f,
                                    List<ValidadorTiposPig.TipoResuelto> tiposArgs) {
         if (f.parametros().size() != tiposArgs.size()) return false;
@@ -176,6 +179,7 @@ public class ValidadorObjetosPig {
         return true;
     }
 
+    /** Compara firma y argumentos permitiendo conversión implícita. */
     private boolean coincideConConversion(TablaSimbolosPig.Firma f,
                                           List<ValidadorTiposPig.TipoResuelto> tiposArgs) {
         if (f.parametros().size() != tiposArgs.size()) return false;
@@ -187,7 +191,7 @@ public class ValidadorObjetosPig {
         return true;
     }
 
-    // Resuelve el tipo de una variable que es un objeto.
+    /** Resuelve el tipo de una variable que es un objeto. */
     private ValidadorTiposPig.TipoResuelto resolverTipoDeObjeto(NodoExpr expr) {
         if (expr instanceof NodoExpr.Identificador id) {
             Optional<TablaSimbolosPig.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
