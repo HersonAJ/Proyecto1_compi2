@@ -47,6 +47,17 @@ public class ValidadorTiposPig {
 
         return switch (expr.tipoNodo()) {
             case LITERAL_ENTERO -> new TipoResuelto(NUMERUS, 0);
+            case UNARIA -> {
+                NodoExpr.Unaria un = (NodoExpr.Unaria) expr;
+                TipoResuelto operando = tipoDeExpresion(un.operando());
+                if (operando != null && !esNumerico(operando.base())) {
+                    errores.add(new ErrorSemantico(un.linea(), un.columna(),
+                            "Tipo incompatible",
+                            "'-' unario requiere tipo numérico, se encontró '" + operando.base() + "'"));
+                    yield null;
+                }
+                yield operando;
+            }
             case LITERAL_DECIMAL -> new TipoResuelto(DECIMALIS, 0);
             case LITERAL_TEXTO -> new TipoResuelto(TEXTUM, 0);
             case LITERAL_CARACTER -> new TipoResuelto(LITTERA, 0);

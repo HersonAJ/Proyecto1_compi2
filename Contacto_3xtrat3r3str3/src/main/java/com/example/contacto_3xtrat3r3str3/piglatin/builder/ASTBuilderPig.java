@@ -472,6 +472,12 @@ public class ASTBuilderPig extends PigParserBaseVisitor<NodoAST> {
         return new NodoExpr.InstanciaObjeto(linea(ctx), columna(ctx), tipo, argumentos);
     }
 
+    @Override
+    public NodoAST visitExprNegacionUnaria(PigParser.ExprNegacionUnariaContext ctx) {
+        NodoExpr operando = (NodoExpr) visit(ctx.expr());
+        return new NodoExpr.Unaria(linea(ctx), columna(ctx), "-", operando);
+    }
+
     /** Construye un NodoExpr.Binaria a partir de dos subexpresiones. */
     private NodoExpr construirBinaria(org.antlr.v4.runtime.ParserRuleContext ctx,
                                       PigParser.ExprContext izqCtx,

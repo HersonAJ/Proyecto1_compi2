@@ -72,6 +72,7 @@ public class ValidadorAlcancePig {
             case LITERAL_ENTERO, LITERAL_DECIMAL, LITERAL_TEXTO,
                  LITERAL_CARACTER, LITERAL_BOOL -> {
             }
+            case UNARIA -> resolverExpresion(((NodoExpr.Unaria) expr).operando());
         }
     }
 

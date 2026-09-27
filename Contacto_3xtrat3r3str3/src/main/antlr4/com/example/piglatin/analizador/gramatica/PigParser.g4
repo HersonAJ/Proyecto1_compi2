@@ -161,6 +161,7 @@ listaArgumentos
 // EXPRESIONES
 expr
     : PAR_A expr PAR_C                                          # exprParentesis
+    | MENOS expr                                                # exprNegacionUnaria
     | NOVUS ID PAR_A listaArgumentos? PAR_C                     # exprInstanciaObjeto
     | LLAVE_A listaExpr? LLAVE_C                                # exprLiteralCompuesto
     | (INC | DEC) ID                                            # exprIncDecPrefijo

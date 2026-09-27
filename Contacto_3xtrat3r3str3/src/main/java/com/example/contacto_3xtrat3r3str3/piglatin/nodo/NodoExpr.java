@@ -24,6 +24,7 @@ public sealed interface NodoExpr extends NodoAST permits
         NodoExpr.AccesoAtributo,
         NodoExpr.Binaria,
         NodoExpr.IncrementoDecremento,
+        NodoExpr.Unaria,
         NodoExpr.LlamadaFuncion,
         NodoExpr.LlamadaMetodo,
         NodoExpr.InstanciaObjeto {
@@ -39,6 +40,22 @@ public sealed interface NodoExpr extends NodoAST permits
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
             return new LiteralPig(valor, "numerus");
+        }
+    }
+    /** '-x'  ->  OperacionUnaria con temporal. */
+    record Unaria(int linea, int columna, String operador, NodoExpr operando) implements NodoExpr {
+        @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.UNARIA; }
+
+        @Override
+        public AccesoMemoria aCodigoIntermedio(ContextoTraduccionPig ctx) {
+            GestorCodigoIntermedio g = ctx.getGestor();
+
+            AccesoMemoria op = operando.aCodigoIntermedio(ctx);
+
+            int idT = g.getContador().siguienteTemporal(op.getTipo());
+            AccesoTemporal t = new AccesoTemporal(idT, op.getTipo());
+            g.emitir(new OperacionUnaria(t, operador, op));
+            return t;
         }
     }
 
