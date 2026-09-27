@@ -6,17 +6,15 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 import java.util.List;
 
 /**
- * Reserva de un arreglo multidimensional al estilo Java:
- *   int** m = new int[a][b];
+ * Cuarteta: t0 = new int[a][b]
  *
- * Se traduce a:
- *   int** m = malloc(a * sizeof(int*));
- *   for (int i = 0; i < a; i++) {
- *       m[i] = malloc(b * sizeof(int));
- *   }
- *
- * Para 3+ dimensiones, se anidan más bucles.
- * Por ahora soportamos 2D.
+ * Reserva una matriz 2D: un arreglo de punteros y luego cada fila.
+ * Ejemplo en .z: int[][] m = new int[3][3]
+ * C generado:
+ *     int** t0 = malloc(3 * sizeof(int*));
+ *     for (int i = 0; i < 3; i++) {
+ *         t0[i] = malloc(3 * sizeof(int));
+ *     }
  */
 public class NewArregloMulti extends Cuarteta {
 
@@ -25,8 +23,8 @@ public class NewArregloMulti extends Cuarteta {
     private final List<AccesoMemoria> tamanos;
 
     public NewArregloMulti(AccesoMemoria destino,
-                            String tipoElementoC,
-                            List<AccesoMemoria> tamanos) {
+                           String tipoElementoC,
+                           List<AccesoMemoria> tamanos) {
         this.destino = destino;
         this.tipoElementoC = tipoElementoC;
         this.tamanos = tamanos;
@@ -39,14 +37,6 @@ public class NewArregloMulti extends Cuarteta {
             throw new IllegalStateException(
                     "NewArregloMulti1 requiere al menos 2 dimensiones");
         }
-
-        // Para 2D:
-        //   destino = malloc(tam0 * sizeof(tipoElemento*));
-        //   for (int i = 0; i < tam0; i++) {
-        //       destino[i] = malloc(tam1 * sizeof(tipoElemento));
-        //   }
-        //
-        // Para 3D+ anidaríamos bucles, pero por ahora solo 2D.
 
         String tipoPuntero = tipoElementoC + "*";
 

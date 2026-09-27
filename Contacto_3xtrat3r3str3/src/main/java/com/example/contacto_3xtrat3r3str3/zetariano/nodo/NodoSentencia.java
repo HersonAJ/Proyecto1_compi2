@@ -12,6 +12,7 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 import java.util.ArrayList;
 import java.util.List;
 
+//Nodos de sentencia del AST del lenguaje .z Cada record sabe traducirse a cuartetas con aCodigoIntermedio()
 public sealed interface NodoSentencia extends NodoAST permits
         NodoSentencia.DeclaracionVariable,
         NodoSentencia.Asignacion,
@@ -34,9 +35,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     void aCodigoIntermedio(ContextoTraduccionZ ctx);
 
     // DECLARACION
-
-    //'int edad = 25;', 'int[] calificaciones = new int[5];', 'int[][] matriz = new int[3][3];'.
-
+    /** 'int x = 25;'  ->  emite una asignación si hay inicializador. */
     record DeclaracionVariable(int linea, int columna, String tipo, String nombre,
                                int dimensiones, NodoExpr inicializacion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.DECLARACION_VARIABLE; }
@@ -72,8 +71,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // ASIGNACION
-
-    // 'x = 5;', 'x += 3;', 'numeros[2] = numeros[0] * 3;'. 'operador' guarda '=', '+=', '-=' o '*='.
+    /** 'x = 5;', 'x += 3;', 'x -= 2;', 'x *= 2;'  ->  emite la cuarteta correspondiente. */
     record Asignacion(int linea, int columna, String operador, NodoExpr destino, NodoExpr valor) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ASIGNACION; }
 
@@ -94,18 +92,17 @@ public sealed interface NodoSentencia extends NodoAST permits
             }
         }
 
+        /** Emite 'x op= y' como 'x = x op y'. */
         private void emitirOperacionCompuesta(GestorCodigoIntermedio g,
                                               AccesoMemoria destino,
                                               AccesoMemoria valor,
                                               String opBinario) {
-            // x += 3   ->   x = x + 3
             g.emitir(new OperacionBinaria(destino, destino, opBinario, valor));
         }
     }
 
     // EXPRESION COMO SENTENCIA
-
-    //Cualquier expresion usada como instruccion suelta: 'p1.saludar();', 'a++;', 'calcular(x);
+    /** Expresión suelta: 'p1.saludar();', 'a++;', 'calcular(x);'  ->  evalúa y descarta. */
     record ExpresionComoSentencia(int linea, int columna, NodoExpr expresion) implements NodoSentencia {
         @Override
         public TipoNodoSentencia tipoNodo() {
@@ -119,8 +116,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // CONDICIONAL
-
-    //if (cond) {...} else {...}
+    /** 'if (cond) {...} else {...}'  ->  etiquetas + saltos. */
     record Condicional(int linea, int columna, NodoExpr condicion,
                        List<NodoSentencia> cuerpoSi,
                        List<NodoSentencia> cuerpoSino) implements NodoSentencia { // null si no hay 'else'
@@ -157,6 +153,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // SWITCH
+    /** 'switch (expr) { case ... default ... }'  ->  cuarteta Switch1. */
     record Switch(int linea, int columna, NodoExpr expresion,
                   List<CasoSwitch> casos, CasoDefault casoDefault) implements NodoSentencia { // casoDefault puede ser null
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.SWITCH; }
@@ -164,28 +161,22 @@ public sealed interface NodoSentencia extends NodoAST permits
         @Override
         public void aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             // 1. Evaluar la expresión del switch.
             AccesoMemoria exprAcc = expresion.aCodigoIntermedio(ctx);
-
             // 2. Activar bandera de switch.
             boolean anterior = ctx.isDentroDeSwitch();
             ctx.setDentroDeSwitch(true);
-
             // 3. Capturar cada caso.
             List<Switch1.Caso> casosTraducidos = new ArrayList<>();
             for (CasoSwitch caso : casos) {
                 AccesoMemoria valorCaso = caso.valor().aCodigoIntermedio(ctx);
-
                 g.empezarCaptura();
                 for (NodoSentencia s : caso.cuerpo()) {
                     s.aCodigoIntermedio(ctx);
                 }
                 List<Cuarteta> cuerpoCapturado = g.terminarCaptura();
-
                 casosTraducidos.add(new Switch1.Caso(valorCaso, cuerpoCapturado));
             }
-
             // 4. Capturar default.
             List<Cuarteta> cuerpoDefault = null;
             if (casoDefault != null) {
@@ -195,16 +186,14 @@ public sealed interface NodoSentencia extends NodoAST permits
                 }
                 cuerpoDefault = g.terminarCaptura();
             }
-
             // 5. Restaurar bandera.
             ctx.setDentroDeSwitch(anterior);
-
             // 6. Emitir el switch completo.
             g.emitir(new Switch1(exprAcc, casosTraducidos, cuerpoDefault));
         }
     }
 
-    // 'case 1: ... break;' — 'break' es opcional
+    /** Caso individual dentro de 'switch'. Lo gestiona Switch. */
     record CasoSwitch(int linea, int columna, NodoExpr valor, List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CASO_SWITCH; }
 
@@ -215,6 +204,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** Caso 'default' dentro de 'switch'. Lo gestiona Switch. */
     record CasoDefault(int linea, int columna, List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CASO_DEFAULT; }
 
@@ -226,7 +216,7 @@ public sealed interface NodoSentencia extends NodoAST permits
     }
 
     // CICLOS
-    //for (init; cond; actualizacion) {...} Las 3 partes son opcionales ('for(;;)' es valido -> null en las 3)
+    /** 'for (init; cond; act) { ... }'  ->  init + etiquetas + salto atrás. */
     record CicloPara(int linea, int columna,
                      NodoSentencia inicializacion,
                      NodoExpr condicion,
@@ -238,42 +228,33 @@ public sealed interface NodoSentencia extends NodoAST permits
         public void aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
             var c = g.getContador();
-
             // Inicialización (opcional).
             if (inicializacion != null) {
                 inicializacion.aCodigoIntermedio(ctx);
             }
-
             int lInicio = c.siguienteEtiqueta();
             int lContinuar = c.siguienteEtiqueta();
             int lRomper = c.siguienteEtiqueta();
-
             g.emitir(new DefinicionEtiqueta(lInicio));
-
             // Condición (opcional).
             if (condicion != null) {
                 AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
                 g.emitir(new Condicional1(condAcc, "==", new LiteralZ(0, "int"), lRomper));
             }
-
             g.entrarCiclo(new ContextoCiclo(lContinuar, lRomper));
-
             for (NodoSentencia s : cuerpo) s.aCodigoIntermedio(ctx);
-
             g.salirCiclo();
-
             g.emitir(new DefinicionEtiqueta(lContinuar));
-
             // Actualización (opcional).
             if (actualizacion != null) {
                 actualizacion.aCodigoIntermedio(ctx);
             }
-
             g.emitir(new Salto(lInicio));
             g.emitir(new DefinicionEtiqueta(lRomper));
         }
     }
 
+    /** 'while (cond) { ... }'  ->  etiqueta inicio + cond + cuerpo + salto atrás. */
     record CicloMientras(int linea, int columna, NodoExpr condicion, List<NodoSentencia> cuerpo) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CICLO_MIENTRAS; }
 
@@ -289,11 +270,9 @@ public sealed interface NodoSentencia extends NodoAST permits
 
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
             g.emitir(new Condicional1(condAcc, "==", new LiteralZ(0, "int"), lRomper));
-
             g.entrarCiclo(new ContextoCiclo(lInicio, lRomper));
 
             for (NodoSentencia s : cuerpo) s.aCodigoIntermedio(ctx);
-
             g.salirCiclo();
 
             g.emitir(new Salto(lInicio));
@@ -301,6 +280,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** 'do { ... } while (cond);'  ->  cuerpo + etiqueta cond + salto si verdad. */
     record CicloHacerMientras(int linea, int columna, List<NodoSentencia> cuerpo, NodoExpr condicion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CICLO_HACER_MIENTRAS; }
 
@@ -314,23 +294,19 @@ public sealed interface NodoSentencia extends NodoAST permits
             int lRomper = c.siguienteEtiqueta();
 
             g.emitir(new DefinicionEtiqueta(lInicio));
-
             g.entrarCiclo(new ContextoCiclo(lCondicion, lRomper));
 
             for (NodoSentencia s : cuerpo) s.aCodigoIntermedio(ctx);
-
             g.salirCiclo();
-
             g.emitir(new DefinicionEtiqueta(lCondicion));
             AccesoMemoria condAcc = condicion.aCodigoIntermedio(ctx);
             g.emitir(new Condicional1(condAcc, "!=", new LiteralZ(0, "int"), lInicio));
-
             g.emitir(new DefinicionEtiqueta(lRomper));
         }
     }
 
     // RETORNO
-    // 'return valor;' o 'return;' (valor null para metodos void).
+    /** 'return valor;' o 'return;'  ->  emite 'return ...'. */
     record Retorno(int linea, int columna, NodoExpr valor) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.RETORNO; }
 
@@ -341,7 +317,8 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // 'println(expr)' o 'print(expr)'. 'saltoDeLinea' distingue cual de las dos fue.
+    // IMPRESION / LECTURA
+    /** 'println(expr)' / 'print(expr)'  ->  ImprimirZ (con o sin \n). */
     record Imprimir(int linea, int columna, boolean saltoDeLinea, NodoExpr expresion) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.IMPRIMIR; }
 
@@ -352,23 +329,22 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
-    // 'readln();'
+    /** 'readln();'  ->  sin destino no emite nada. */
     record Leer(int linea, int columna) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.LEER; }
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccionZ ctx) {
-            // 'readln();' como sentencia suelta no tiene destino útil.
-            // No emitimos nada.
         }
     }
 
+    /** 'break;'  ->  break de switch o goto de fin de ciclo. */
     record Romper(int linea, int columna) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.ROMPER; }
 
         @Override
         public void aCodigoIntermedio(ContextoTraduccionZ ctx) {
-            // Si estamos dentro de un switch, emitimos 'break;' de C.
+            // Si esta dentro de un switch, emite 'break;' de C.
             if (ctx.isDentroDeSwitch()) {
                 ctx.getGestor().emitir(new RomperSwitch());
                 return;
@@ -383,6 +359,7 @@ public sealed interface NodoSentencia extends NodoAST permits
         }
     }
 
+    /** 'continue;'  ->  goto de continuación del ciclo activo. */
     record Continuar(int linea, int columna) implements NodoSentencia {
         @Override public TipoNodoSentencia tipoNodo() { return TipoNodoSentencia.CONTINUAR; }
 

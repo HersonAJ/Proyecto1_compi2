@@ -12,14 +12,15 @@ import com.example.contacto_3xtrat3r3str3.zetariano.semantica.TablaSimbolosZ;
 import java.util.ArrayList;
 import java.util.List;
 
+//Nodo del AST que representa un metodo de la clase
 public record NodoMetodo(int linea, int columna, String nombre,
                          List<NodoParametroZ> parametros,
                          String tipoRetorno,
                          List<NodoSentencia> cuerpo) implements NodoAST {
 
+    /** Traduce el metodo a una FuncionC lista para el generador C. */
     public FuncionC aFuncionC(TablaSimbolosZ tabla, String nombreClase) {
         GestorCodigoIntermedio gestor = new GestorCodigoIntermedio();
-
         String nombreC = construirNombreC(nombreClase);
         ContextoTraduccionZ ctx = new ContextoTraduccionZ(gestor, tabla, nombreClase, nombreC);
 
@@ -57,6 +58,7 @@ public record NodoMetodo(int linea, int columna, String nombre,
         }
     }
 
+    /** Nombre C: Clase_metodo_tipo1_tipo2. */
     private String construirNombreC(String nombreClase) {
         StringBuilder sb = new StringBuilder();
         sb.append(nombreClase).append('_').append(nombre);
@@ -66,6 +68,7 @@ public record NodoMetodo(int linea, int columna, String nombre,
         return sb.toString();
     }
 
+    /** Tipo de retorno en C. */
     private static String tipoRetornoC(String tipoZ) {
         if (TipoCZ.esPrimitivo(tipoZ)) {
             return TipoCZ.baseValorAC(tipoZ);
@@ -73,6 +76,7 @@ public record NodoMetodo(int linea, int columna, String nombre,
         return "struct " + tipoZ + "*";
     }
 
+    /** Convierte un parámetro del AST a ParametroC. */
     private static ParametroC aParametroC(NodoParametroZ p) {
         String tipoC;
         if (TipoCZ.esPrimitivo(p.tipo())) {
@@ -83,12 +87,14 @@ public record NodoMetodo(int linea, int columna, String nombre,
         return new ParametroC(tipoC, p.nombre());
     }
 
+    /** Declara todas las variables locales del metodo. */
     private void declararLocales(TablaSimbolosZ tabla,
                                  List<NodoSentencia> sentencias,
                                  List<VariableLocalC> acumuladas) {
         declararLocales(tabla, sentencias, acumuladas, new java.util.HashSet<>());
     }
 
+    /** Declara las variables locales recursivamente, evitando repetidos. */
     private void declararLocales(TablaSimbolosZ tabla,
                                  List<NodoSentencia> sentencias,
                                  List<VariableLocalC> acumuladas,

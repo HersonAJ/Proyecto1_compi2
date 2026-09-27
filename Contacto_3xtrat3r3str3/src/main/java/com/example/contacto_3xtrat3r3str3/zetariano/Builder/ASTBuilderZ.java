@@ -18,6 +18,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoPrograma(linea(ctx), columna(ctx), clase);
     }
 
+    /** 'public class X { ... }'  .>  NodoClase con atributos, constructores y métodos. */
     @Override
     public NodoAST visitClaseDefinicion(ZParser.ClaseDefinicionContext ctx) {
         String nombre = ctx.ID().getText();
@@ -36,12 +37,12 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoClase(linea(ctx), columna(ctx), nombre, atributos, constructores, metodos);
     }
 
-    //regla contenedora: delega al unico hijo real (atributo, constructor o metodo)
     @Override
     public NodoAST visitMiembroClase(ZParser.MiembroClaseContext ctx) {
         return visit(ctx.getChild(0));
     }
 
+    /** 'tipo ID;'  ->  NodoAtributoZ con tipo y dimensiones. */
     @Override
     public NodoAST visitAtributo(ZParser.AtributoContext ctx) {
         String tipo = ctx.tipo().getText();
@@ -50,6 +51,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoAtributoZ(linea(ctx), columna(ctx), tipo, nombre, dimensiones);
     }
 
+    /** 'public Nombre(params) { ... }'  ->  NodoConstructor. */
     @Override
     public NodoAST visitConstructor(ZParser.ConstructorContext ctx) {
         String nombre = ctx.ID().getText();
@@ -58,6 +60,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoConstructor(linea(ctx), columna(ctx), nombre, parametros, cuerpo);
     }
 
+    /** 'public tipo nombre(params) { ... }'  ->  NodoMetodo. */
     @Override
     public NodoAST visitMetodo(ZParser.MetodoContext ctx) {
         String nombre = ctx.ID().getText();
@@ -67,11 +70,13 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoMetodo(linea(ctx), columna(ctx), nombre, parametros, tipoRetorno, cuerpo);
     }
 
+    /** 'tipo ID'  ->  NodoParametroZ. */
     @Override
     public NodoAST visitParametro(ZParser.ParametroContext ctx) {
         return new NodoParametroZ(linea(ctx), columna(ctx), ctx.tipo().getText(), ctx.ID().getText());
     }
 
+    /** Convierte los parámetros del parser en nodos NodoParametroZ. */
     private List<NodoParametroZ> construirParametros(ZParser.ParametrosContext ctx) {
         List<NodoParametroZ> parametros = new ArrayList<>();
         if (ctx == null) return parametros;
@@ -82,19 +87,16 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return parametros;
     }
 
-    //regla contenedora, no se usa directamente (ver construirParametros)
     @Override
     public NodoAST visitParametros(ZParser.ParametrosContext ctx) {
         return null;
     }
 
-    //regla contenedora, el tipo se lee siempre con ctx.tipo().getText() desde el padre
     @Override
-    public NodoAST visitTipo(ZParser.TipoContext ctx) {
-        return null;
-    }
+    public NodoAST visitTipo(ZParser.TipoContext ctx) { return null;}
 
     // BLOQUES Y SENTENCIAS
+    /** Convierte las sentencias de un bloque en lista de nodos. */
     private List<NodoSentencia> construirBloque(ZParser.BloqueContext ctx) {
         List<NodoSentencia> cuerpo = new ArrayList<>();
         if (ctx == null) return cuerpo;
@@ -105,7 +107,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return cuerpo;
     }
 
-    //convierte 'sentenciaOBloque' (con o sin llaves) siempre a una lista uniforme
+    /** Convierte 'sentenciaOBloque' (con o sin llaves) a una lista uniforme. */
     private List<NodoSentencia> construirCuerpo(ZParser.SentenciaOBloqueContext ctx) {
         if (ctx.bloque() != null) {
             return construirBloque(ctx.bloque());
@@ -116,25 +118,19 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return cuerpo;
     }
 
-    //regla contenedora
     @Override
-    public NodoAST visitBloque(ZParser.BloqueContext ctx) {
-        return null;
-    }
+    public NodoAST visitBloque(ZParser.BloqueContext ctx) { return null; }
 
-    //regla contenedora: delega al unico hijo real
     @Override
-    public NodoAST visitSentencia(ZParser.SentenciaContext ctx) {
-        return visit(ctx.getChild(0));
-    }
+    public NodoAST visitSentencia(ZParser.SentenciaContext ctx) { return visit(ctx.getChild(0)); }
 
-    //regla contenedora, ver construirCuerpo
     @Override
     public NodoAST visitSentenciaOBloque(ZParser.SentenciaOBloqueContext ctx) {
         return null;
     }
 
     // DECLARACION Y ASIGNACION
+    /** 'tipoDeclaracion ID ( = init)?;'  ->  NodoSentencia.DeclaracionVariable. */
     @Override
     public NodoAST visitDeclaracion(ZParser.DeclaracionContext ctx) {
         String tipo = ctx.tipoDeclaracion().tipo().getText();
@@ -145,10 +141,9 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     }
 
     @Override
-    public NodoAST visitTipoDeclaracion(ZParser.TipoDeclaracionContext ctx) {
-        return null;
-    }
+    public NodoAST visitTipoDeclaracion(ZParser.TipoDeclaracionContext ctx) { return null; }
 
+    /** '{ e1, e2, ... }'  ->  NodoExpr.ListaLiteral;  resto  ->  expresión normal. */
     @Override
     public NodoAST visitInicializador(ZParser.InicializadorContext ctx) {
         //forma '{ expr, expr, ... }' -> literal de lista (arreglos)
@@ -166,12 +161,10 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return visit(ctx.expresion());
     }
 
-    //regla contenedora, se recorre desde visitInicializador
     @Override
-    public NodoAST visitListaExpresiones(ZParser.ListaExpresionesContext ctx) {
-        return null;
-    }
+    public NodoAST visitListaExpresiones(ZParser.ListaExpresionesContext ctx) { return null; }
 
+    /** 'destino op valor;'  ->  NodoSentencia.Asignacion (op: =, +=, -=, *=). */
     @Override
     public NodoAST visitAsignacion(ZParser.AsignacionContext ctx) {
         NodoExpr destino = (NodoExpr) visit(ctx.expresion(0));
@@ -180,6 +173,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Asignacion(linea(ctx), columna(ctx), operador, destino, valor);
     }
 
+    /** Expresión suelta como sentencia  ->  NodoSentencia.ExpresionComoSentencia. */
     @Override
     public NodoAST visitExpresionSentencia(ZParser.ExpresionSentenciaContext ctx) {
         NodoExpr expr = (NodoExpr) visit(ctx.expresion());
@@ -187,6 +181,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     }
 
     // CONDICIONAL Y SWITCH
+    /** 'if (c) ... else ...'  ->  NodoSentencia.Condicional. */
     @Override
     public NodoAST visitCondicional(ZParser.CondicionalContext ctx) {
         NodoExpr condicion = (NodoExpr) visit(ctx.expresion());
@@ -197,6 +192,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Condicional(linea(ctx), columna(ctx), condicion, cuerpoSi, cuerpoSino);
     }
 
+    /** 'switch (expr) { case ... default ... }'  ->  NodoSentencia.Switch. */
     @Override
     public NodoAST visitSwitchSentencia(ZParser.SwitchSentenciaContext ctx) {
         NodoExpr expresion = (NodoExpr) visit(ctx.expresion());
@@ -216,6 +212,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Switch(linea(ctx), columna(ctx), expresion, casos, casoDefault);
     }
 
+    /** 'case valor: ...'  ->  NodoSentencia.CasoSwitch. */
     @Override
     public NodoAST visitCasoSwitch(ZParser.CasoSwitchContext ctx) {
         NodoExpr valor = (NodoExpr) visit(ctx.literal());
@@ -227,6 +224,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CasoSwitch(linea(ctx), columna(ctx), valor, cuerpo);
     }
 
+    /** 'default: ...'  ->  NodoSentencia.CasoDefault. */
     @Override
     public NodoAST visitCasoDefault(ZParser.CasoDefaultContext ctx) {
         List<NodoSentencia> cuerpo = new ArrayList<>();
@@ -238,6 +236,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     }
 
     // CICLOS
+    /** 'for (init; cond; act) { ... }'  ->  NodoSentencia.CicloPara. */
     @Override
     public NodoAST visitCicloFor(ZParser.CicloForContext ctx) {
         NodoSentencia inicializacion = ctx.forInit() != null ? (NodoSentencia) visit(ctx.forInit()) : null;
@@ -247,33 +246,34 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CicloPara(linea(ctx), columna(ctx), inicializacion, condicion, actualizacion, cuerpo);
     }
 
+    /** 'tipo ID = expr'  ->  DeclaracionVariable;  'expr'  ->  ExpresionComoSentencia. */
     @Override
     public NodoAST visitForInit(ZParser.ForInitContext ctx) {
-        //alternativa 1: 'tipo ID = expresion' -> se modela como declaracion (dimensiones=0, no se declaran arreglos aqui)
+        //alternativa 1: 'tipo ID = expresion' -> se modela como declaracion
         if (ctx.tipo() != null) {
             String tipo = ctx.tipo().getText();
             String nombre = ctx.ID().getText();
             NodoExpr valor = (NodoExpr) visit(ctx.expresion());
             return new NodoSentencia.DeclaracionVariable(linea(ctx), columna(ctx), tipo, nombre, 0, valor);
         }
-        //alternativa 2: solo una expresion ( reusar una variable ya declarada afuera)
+        //alternativa 2: solo una expresion
         NodoExpr expr = (NodoExpr) visit(ctx.expresion());
         return new NodoSentencia.ExpresionComoSentencia(linea(ctx), columna(ctx), expr);
     }
 
+    /** 'expr ++/--'  ->  ExpresionComoSentencia con IncrementoDecremento;  resto  ->  expresión. */
     @Override
     public NodoAST visitForActualizacion(ZParser.ForActualizacionContext ctx) {
         NodoExpr base = (NodoExpr) visit(ctx.expresion());
-        //alternativa con '++' o '--' al final -> se modela como incremento/decremento postfijo
         if (ctx.INCREMENTO() != null || ctx.DECREMENTO() != null) {
             String operador = ctx.INCREMENTO() != null ? "++" : "--";
             NodoExpr incremento = new NodoExpr.IncrementoDecremento(linea(ctx), columna(ctx), operador, base, false);
             return new NodoSentencia.ExpresionComoSentencia(linea(ctx), columna(ctx), incremento);
         }
-        //alternativa de solo expresion
         return new NodoSentencia.ExpresionComoSentencia(linea(ctx), columna(ctx), base);
     }
 
+    /** 'while (cond) { ... }'  ->  NodoSentencia.CicloMientras. */
     @Override
     public NodoAST visitCicloWhile(ZParser.CicloWhileContext ctx) {
         NodoExpr condicion = (NodoExpr) visit(ctx.expresion());
@@ -281,6 +281,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CicloMientras(linea(ctx), columna(ctx), condicion, cuerpo);
     }
 
+    /** 'do { ... } while (cond);'  ->  NodoSentencia.CicloHacerMientras. */
     @Override
     public NodoAST visitCicloDoWhile(ZParser.CicloDoWhileContext ctx) {
         List<NodoSentencia> cuerpo = construirBloque(ctx.bloque());
@@ -288,13 +289,15 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.CicloHacerMientras(linea(ctx), columna(ctx), cuerpo, condicion);
     }
 
-    // RETORNO Y E/S
+    // RETORNO
+    /** 'return expr?;'  ->  NodoSentencia.Retorno. */
     @Override
     public NodoAST visitRetorno(ZParser.RetornoContext ctx) {
         NodoExpr valor = ctx.expresion() != null ? (NodoExpr) visit(ctx.expresion()) : null;
         return new NodoSentencia.Retorno(linea(ctx), columna(ctx), valor);
     }
 
+    /** 'println(expr);'  /  'print(expr);'  ->  NodoSentencia.Imprimir. */
     @Override
     public NodoAST visitImprimir(ZParser.ImprimirContext ctx) {
         boolean saltoDeLinea = ctx.PRINTLN() != null;
@@ -302,37 +305,34 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoSentencia.Imprimir(linea(ctx), columna(ctx), saltoDeLinea, expresion);
     }
 
+    /** 'readln();'  ->  NodoSentencia.Leer. */
     @Override
-    public NodoAST visitLeer(ZParser.LeerContext ctx) {
-        return new NodoSentencia.Leer(linea(ctx), columna(ctx));
-    }
+    public NodoAST visitLeer(ZParser.LeerContext ctx) { return new NodoSentencia.Leer(linea(ctx), columna(ctx)); }
 
+    /** 'break;'  ->  NodoSentencia.Romper. */
     @Override
-    public NodoAST visitRomper(ZParser.RomperContext ctx) {
-        return new NodoSentencia.Romper(linea(ctx), columna(ctx));
-    }
+    public NodoAST visitRomper(ZParser.RomperContext ctx) { return new NodoSentencia.Romper(linea(ctx), columna(ctx)); }
 
+    /** 'continue;'  ->  NodoSentencia.Continuar. */
     @Override
-    public NodoAST visitContinuar(ZParser.ContinuarContext ctx) {
-        return new NodoSentencia.Continuar(linea(ctx), columna(ctx));
-    }
+    public NodoAST visitContinuar(ZParser.ContinuarContext ctx) { return new NodoSentencia.Continuar(linea(ctx), columna(ctx)); }
 
     // EXPRESIONES BASICAS
+    /** '(expr)'  ->  devuelve la expresión interna. */
     @Override
-    public NodoAST visitExprParentesis(ZParser.ExprParentesisContext ctx) {
-        return visit(ctx.expresion());
-    }
+    public NodoAST visitExprParentesis(ZParser.ExprParentesisContext ctx) { return visit(ctx.expresion()); }
 
+    /** Literal como expresión. */
     @Override
-    public NodoAST visitExprLiteral(ZParser.ExprLiteralContext ctx) {
-        return visit(ctx.literal());
-    }
+    public NodoAST visitExprLiteral(ZParser.ExprLiteralContext ctx) { return visit(ctx.literal()); }
 
+    /** Identificador como expresión  ->  NodoExpr.Identificador. */
     @Override
     public NodoAST visitExprIdentificador(ZParser.ExprIdentificadorContext ctx) {
         return new NodoExpr.Identificador(linea(ctx), columna(ctx), ctx.ID().getText());
     }
 
+    /** Literal: int, double, String, char, bool o null. */
     @Override
     public NodoAST visitLiteral(ZParser.LiteralContext ctx) {
         if (ctx.ENTERO_LIT() != null) {
@@ -355,17 +355,18 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         if (ctx.FALSE() != null) {
             return new NodoExpr.LiteralBool(linea(ctx), columna(ctx), false);
         }
-        //NULL_LIT
         return new NodoExpr.LiteralNulo(linea(ctx), columna(ctx));
     }
 
     // ACCESOS Y LLAMADAS
+    /** 'objeto.atributo'  ->  NodoExpr.AccesoAtributo. */
     @Override
     public NodoAST visitExprAccesoAtributo(ZParser.ExprAccesoAtributoContext ctx) {
         NodoExpr objeto = (NodoExpr) visit(ctx.expresion());
         return new NodoExpr.AccesoAtributo(linea(ctx), columna(ctx), objeto, ctx.ID().getText());
     }
 
+    /** 'arreglo[indice]'  ->  NodoExpr.AccesoArray. */
     @Override
     public NodoAST visitExprAccesoArray(ZParser.ExprAccesoArrayContext ctx) {
         NodoExpr arreglo = (NodoExpr) visit(ctx.expresion(0));
@@ -373,6 +374,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.AccesoArray(linea(ctx), columna(ctx), arreglo, indice);
     }
 
+    /** 'nombre(args)'  ->  NodoExpr.LlamadaFuncion. */
     @Override
     public NodoAST visitExprLlamadaFuncion(ZParser.ExprLlamadaFuncionContext ctx) {
         String nombre = ctx.ID().getText();
@@ -380,6 +382,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.LlamadaFuncion(linea(ctx), columna(ctx), nombre, argumentos);
     }
 
+    /** 'objeto.nombre(args)'  ->  NodoExpr.LlamadaMetodo. */
     @Override
     public NodoAST visitExprLlamadaMetodo(ZParser.ExprLlamadaMetodoContext ctx) {
         NodoExpr objeto = (NodoExpr) visit(ctx.expresion());
@@ -388,6 +391,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.LlamadaMetodo(linea(ctx), columna(ctx), objeto, nombre, argumentos);
     }
 
+    /** 'new Clase(args)'  ->  NodoExpr.InstanciaObjeto. */
     @Override
     public NodoAST visitExprInstanciacionObjeto(ZParser.ExprInstanciacionObjetoContext ctx) {
         String tipoClase = ctx.ID().getText();
@@ -395,13 +399,13 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.InstanciaObjeto(linea(ctx), columna(ctx), tipoClase, argumentos);
     }
 
+    /** 'new tipo[d1][d2]...'  ->  NodoExpr.ArregloNuevo (dimensiones pueden ser null). */
     @Override
     public NodoAST visitExprArregloNuevo(ZParser.ExprArregloNuevoContext ctx) {
         String tipoBase = ctx.tipo().getText();
         List<NodoExpr> dimensiones = new ArrayList<>();
 
         //recorremos los hijos manualmente porque cada '[ ]' puede traer o no una expresion de tamano
-        //('new int[3][]' -> la segunda dimension queda como null)
         int totalHijos = ctx.getChildCount();
         for (int i = 0; i < totalHijos; i++) {
             ParseTree hijo = ctx.getChild(i);
@@ -418,6 +422,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.ArregloNuevo(linea(ctx), columna(ctx), tipoBase, dimensiones);
     }
 
+    /** Convierte los argumentos del parser en lista de expresiones. */
     private List<NodoExpr> construirArgumentos(ZParser.ArgumentosContext ctx) {
         List<NodoExpr> argumentos = new ArrayList<>();
         if (ctx == null) return argumentos;
@@ -428,13 +433,11 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return argumentos;
     }
 
-    //regla contenedora, va a construirArgumentos
     @Override
-    public NodoAST visitArgumentos(ZParser.ArgumentosContext ctx) {
-        return null;
-    }
+    public NodoAST visitArgumentos(ZParser.ArgumentosContext ctx) { return null; }
 
     // INCREMENTO/DECREMENTO Y OPERACIONES UNARIAS
+    /** 'expr ++/--'  ->  NodoExpr.IncrementoDecremento (postfijo). */
     @Override
     public NodoAST visitExprPostIncrementoDecremento(ZParser.ExprPostIncrementoDecrementoContext ctx) {
         NodoExpr operando = (NodoExpr) visit(ctx.expresion());
@@ -442,6 +445,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.IncrementoDecremento(linea(ctx), columna(ctx), operador, operando, false);
     }
 
+    /** '++/-- expr'  ->  NodoExpr.IncrementoDecremento (prefijo). */
     @Override
     public NodoAST visitExprPreIncrementoDecremento(ZParser.ExprPreIncrementoDecrementoContext ctx) {
         NodoExpr operando = (NodoExpr) visit(ctx.expresion());
@@ -449,6 +453,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.IncrementoDecremento(linea(ctx), columna(ctx), operador, operando, true);
     }
 
+    /** '-expr' o '!expr'  ->  NodoExpr.Unaria. */
     @Override
     public NodoAST visitExprUnaria(ZParser.ExprUnariaContext ctx) {
         String operador = ctx.MENOS() != null ? "-" : "!";
@@ -457,36 +462,43 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     }
 
     // OPERACIONES BINARIAS
+    /** 'a * b', 'a / b' o 'a % b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprMultiplicacion(ZParser.ExprMultiplicacionContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    /** 'a + b' o 'a - b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprSumaResta(ZParser.ExprSumaRestaContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    /** 'a < b', 'a > b', 'a <= b' o 'a >= b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprRelacional(ZParser.ExprRelacionalContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    /** 'a == b' o 'a != b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprIgualdad(ZParser.ExprIgualdadContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), ctx.getChild(1).getText());
     }
 
+    /** 'a && b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprAnd(ZParser.ExprAndContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), "&&");
     }
 
+    /** 'a || b'  ->  NodoExpr.Binaria. */
     @Override
     public NodoAST visitExprOr(ZParser.ExprOrContext ctx) {
         return construirBinaria(ctx, ctx.expresion(0), ctx.expresion(1), "||");
     }
 
+    /** Construye un NodoExpr.Binaria a partir de dos subexpresiones. */
     private NodoExpr construirBinaria(org.antlr.v4.runtime.ParserRuleContext ctx,
                                       ZParser.ExpresionContext izqCtx,
                                       ZParser.ExpresionContext derCtx,
@@ -496,6 +508,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
         return new NodoExpr.Binaria(linea(ctx), columna(ctx), operador, izq, der);
     }
 
+    /** 'cond ? a : b'  ->  NodoExpr.Ternaria. */
     @Override
     public NodoAST visitExprTernaria(ZParser.ExprTernariaContext ctx) {
         NodoExpr condicion = (NodoExpr) visit(ctx.expresion(0));
@@ -505,11 +518,7 @@ public class ASTBuilderZ extends ZParserBaseVisitor<NodoAST> {
     }
 
     // HELPERS
-    private int linea(org.antlr.v4.runtime.ParserRuleContext ctx) {
-        return ctx.getStart().getLine();
-    }
+    private int linea(org.antlr.v4.runtime.ParserRuleContext ctx) { return ctx.getStart().getLine(); }
 
-    private int columna(org.antlr.v4.runtime.ParserRuleContext ctx) {
-        return ctx.getStart().getCharPositionInLine();
-    }
+    private int columna(org.antlr.v4.runtime.ParserRuleContext ctx) { return ctx.getStart().getCharPositionInLine(); }
 }

@@ -5,6 +5,15 @@ import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoSentencia;
 
 import java.util.List;
 
+/**
+ * Valida reglas de flujo de control en .z.
+ *
+ * Validaciones:
+ *   - 'break' fuera de ciclo o switch           -> validarRomper
+ *   - 'continue' fuera de ciclo                 -> validarContinuar
+ *   - Código inalcanzable tras return/break/continue -> validarCodigoInalcanzable
+ *   - Metodo con retorno no garantizado         -> validarRetornoGarantizado
+ */
 public class ValidadorFlujoZ {
 
     private final List<ErrorSemantico> errores;
@@ -17,10 +26,10 @@ public class ValidadorFlujoZ {
 
     public void entrarCiclo() { nivelCiclo++;}
     public void salirCiclo() { nivelCiclo--; }
-
     public void entrarSwitch() {nivelSwitch++; }
     public void salirSwitch() { nivelSwitch--;}
 
+    /** Verifica que 'break' esté dentro de un ciclo o de un switch. */
     public void validarRomper(NodoSentencia.Romper r) {
         if (nivelCiclo == 0 && nivelSwitch == 0) {
             errores.add(new ErrorSemantico(r.linea(), r.columna(), "Flujo invalido",
@@ -28,6 +37,7 @@ public class ValidadorFlujoZ {
         }
     }
 
+    /** Verifica que 'continue' esté dentro de un ciclo. */
     public void validarContinuar(NodoSentencia.Continuar c) {
         if (nivelCiclo == 0) {
             errores.add(new ErrorSemantico(c.linea(), c.columna(), "Flujo invalido",
@@ -36,6 +46,7 @@ public class ValidadorFlujoZ {
     }
 
     // CODIGO INALCANZABLE
+    /** Reporta instrucciones inalcanzables después de return/break/continue. */
     public void validarCodigoInalcanzable(List<NodoSentencia> bloque) {
         if (bloque == null) return;
 
@@ -60,11 +71,12 @@ public class ValidadorFlujoZ {
     }
 
     // FALTA DE RETORNO
+    /** Verifica que un metodo con retorno tenga 'return' en todos los caminos. */
     public void validarRetornoGarantizado(String tipoRetorno,
                                           List<NodoSentencia> cuerpo,
                                           int linea,
                                           int columna) {
-        // Si el método es void, no hay nada que validar.
+        // Si el metodo es void, no hay nada que validar.
         if (tipoRetorno == null) return;
 
         if (cuerpo == null || cuerpo.isEmpty()) {
@@ -73,9 +85,7 @@ public class ValidadorFlujoZ {
                     "El método declara retorno de tipo '" + tipoRetorno + "' pero no tiene instrucciones"));
             return;
         }
-
         boolean garantiza = bloqueGarantizaRetorno(cuerpo);
-
         if (!garantiza) {
             errores.add(new ErrorSemantico(linea, columna,
                     "Falta de retorno",
@@ -84,6 +94,7 @@ public class ValidadorFlujoZ {
         }
     }
 
+    /** Devuelve true si un bloque garantiza que siempre se retorna. */
     private boolean bloqueGarantizaRetorno(List<NodoSentencia> bloque) {
         if (bloque == null || bloque.isEmpty()) return false;
 
@@ -95,6 +106,7 @@ public class ValidadorFlujoZ {
         return false;
     }
 
+    /** Devuelve true si una instrucción garantiza retorno en todos los caminos. */
     private boolean instruccionGarantizaRetorno(NodoSentencia s) {
         // Caso 1: return directo.
         if (s instanceof NodoSentencia.Retorno) {

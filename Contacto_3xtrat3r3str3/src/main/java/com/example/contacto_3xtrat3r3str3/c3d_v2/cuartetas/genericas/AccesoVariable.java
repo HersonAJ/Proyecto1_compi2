@@ -2,7 +2,11 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 
 /**
- * Uso de una variable simple. El tipo es informativo; el nombre va tal cual a C.
+ * Operando: x, contador, nombre, ...
+ *
+ * Representa el uso de una variable simple. El nombre va tal cual a C.
+ * Ejemplo en C: x = 5;
+ * C generado:   x
  */
 public class AccesoVariable extends AccesoMemoria {
 

@@ -2,8 +2,11 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 
 /**
- * t0 = (tipoC) a
- * Se emite cuando hace falta promocionar explícitamente en C.
+ * Cuarteta: t0 = (tipoC) a
+ *
+ * Convierte explícitamente un valor a otro tipo (promoción de tipos).
+ * Ejemplo en .y: entero + flotante  →  conversión del entero a flotante
+ * C generado:    t0 = (float) t1;
  */
 public class ConversionTipo extends Cuarteta {
 

@@ -6,6 +6,16 @@ import com.example.contacto_3xtrat3r3str3.zetariano.nodo.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Orquesta todas las validaciones semánticas del lenguaje .z.
+ *
+ * Orden de ejecución:
+ *   1. Declarar clase, atributos, constructores y métodos   -> analizar
+ *   2. Validar tipos de atributos                           -> analizar
+ *   3. Procesar cuerpo de cada constructor                  -> procesarCuerpoConParametros
+ *   4. Procesar cuerpo de cada metodo                       -> procesarCuerpoConParametros
+ *   5. Procesar cada sentencia del cuerpo                   -> procesarSentencia
+ */
 public class ValidadorSemanticoZ {
 
     private final TablaSimbolosZ tabla = new TablaSimbolosZ();
@@ -15,7 +25,6 @@ public class ValidadorSemanticoZ {
     private final ValidadorAlcanceZ alcance = new ValidadorAlcanceZ(tabla, errores);
     private final ValidadorFlujoZ flujo = new ValidadorFlujoZ(errores);
     private final ValidadorTiposZ tipos = new ValidadorTiposZ(tabla, errores);
-
     private String tipoRetornoActual;
 
     public List<ErrorSemantico> analizar(NodoPrograma programa) {
@@ -49,7 +58,7 @@ public class ValidadorSemanticoZ {
         return errores;
     }
 
-
+    /** Procesa el cuerpo de un constructor o metodo dentro de su propio scope. */
     private void procesarCuerpoConParametros(List<NodoParametroZ> parametros, List<NodoSentencia> cuerpo) {
         tabla.entrarScope("miembro");
         declaraciones.declararParametrosEnScope(parametros);
@@ -57,11 +66,13 @@ public class ValidadorSemanticoZ {
         tabla.salirScope();
     }
 
+    /** Procesa un bloque: primero código inalcanzable, luego cada sentencia. */
     private void procesarBloque(List<NodoSentencia> bloque) {
         flujo.validarCodigoInalcanzable(bloque);
         for (NodoSentencia s : bloque) procesarSentencia(s);
     }
 
+    /** Procesa cada tipo de sentencia con sus validaciones correspondientes. */
     private void procesarSentencia(NodoSentencia s) {
         switch (s.tipoNodo()) {
             case DECLARACION_VARIABLE -> {
@@ -88,7 +99,6 @@ public class ValidadorSemanticoZ {
             case CICLO_PARA -> procesarCicloPara((NodoSentencia.CicloPara) s);
             case CICLO_MIENTRAS -> procesarCicloMientras((NodoSentencia.CicloMientras) s);
             case CICLO_HACER_MIENTRAS -> procesarCicloHacerMientras((NodoSentencia.CicloHacerMientras) s);
-
             case RETORNO -> {
                 NodoSentencia.Retorno r = (NodoSentencia.Retorno) s;
                 alcance.resolverExpresion(r.valor());
@@ -102,11 +112,11 @@ public class ValidadorSemanticoZ {
             case LEER -> { }
             case ROMPER -> flujo.validarRomper((NodoSentencia.Romper) s);
             case CONTINUAR -> flujo.validarContinuar((NodoSentencia.Continuar) s);
-
             case CASO_SWITCH, CASO_DEFAULT -> { }
         }
     }
 
+    /** Procesa un 'if/else'. */
     private void procesarCondicional(NodoSentencia.Condicional c) {
         alcance.resolverExpresion(c.condicion());
         tipos.validarCondicionBooleana(c.condicion());
@@ -121,6 +131,7 @@ public class ValidadorSemanticoZ {
         }
     }
 
+    /** Procesa un 'switch' con sus casos y default. */
     private void procesarSwitch(NodoSentencia.Switch sw) {
         alcance.resolverExpresion(sw.expresion());
         tipos.tipoDeExpresion(sw.expresion());
@@ -141,6 +152,7 @@ public class ValidadorSemanticoZ {
         flujo.salirSwitch();
     }
 
+    /** Procesa un ciclo 'for'. */
     private void procesarCicloPara(NodoSentencia.CicloPara c) {
         tabla.entrarScope("para");
         if (c.inicializacion() != null) procesarSentencia(c.inicializacion());
@@ -155,6 +167,7 @@ public class ValidadorSemanticoZ {
         tabla.salirScope();
     }
 
+    /** Procesa un ciclo 'while'. */
     private void procesarCicloMientras(NodoSentencia.CicloMientras c) {
         alcance.resolverExpresion(c.condicion());
         tipos.validarCondicionBooleana(c.condicion());
@@ -165,6 +178,7 @@ public class ValidadorSemanticoZ {
         tabla.salirScope();
     }
 
+    /** Procesa un ciclo 'do-while'. */
     private void procesarCicloHacerMientras(NodoSentencia.CicloHacerMientras c) {
         tabla.entrarScope("hacer-mientras");
         flujo.entrarCiclo();
@@ -175,13 +189,14 @@ public class ValidadorSemanticoZ {
         tipos.validarCondicionBooleana(c.condicion());
     }
 
+    /** Valida que los tipos de los parámetros existan. */
     private void validarTiposDeParametros(List<NodoParametroZ> parametros) {
         for (NodoParametroZ p : parametros) {
             alcance.validarTipoDeclarado(p.tipo(), p.linea(), p.columna());
         }
     }
 
-        public List<ErrorSemantico> getErrores() {
+    public List<ErrorSemantico> getErrores() {
         return errores;
     }
 

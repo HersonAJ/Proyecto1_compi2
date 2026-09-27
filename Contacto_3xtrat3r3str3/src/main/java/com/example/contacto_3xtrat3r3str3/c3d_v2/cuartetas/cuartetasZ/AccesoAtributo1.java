@@ -3,9 +3,12 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemoria;
 
 /**
- * Acceso a un campo de estructura.
- *   base.campo     ->  base.campo
- *   base->campo    ->  base->campo   (cuando la base es un puntero)
+ * Operando: p->campo  o  p.campo
+ *
+ * Acceso a un campo de estructura u objeto.
+ * En .z siempre se usa '->' porque los objetos son punteros.
+ * Ejemplo en .z: p1.edad
+ * C generado:    p1->edad
  */
 public class AccesoAtributo1 extends AccesoMemoria {
 

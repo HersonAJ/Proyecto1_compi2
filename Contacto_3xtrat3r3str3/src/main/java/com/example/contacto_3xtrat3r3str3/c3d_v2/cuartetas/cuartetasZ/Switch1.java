@@ -5,14 +5,27 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 
 import java.util.List;
 
+/**
+ * Cuarteta: switch (opcion) { case 1: ... case 2: ... default: ... }
+ *
+ * Traduce un 'switch' de .z a un switch de C con sus casos y default.
+ * Ejemplo en .z: switch (opcion) { case 1: ... break; default: ... }
+ * C generado:
+ *     switch (opcion) {
+ *         case 1:
+ *             ...
+ *         default:
+ *             ...
+ *     }
+ */
 public class Switch1 extends Cuarteta {
 
+    /** Un case del switch: valor literal + cuerpo ya traducido. */
     public record Caso(AccesoMemoria valor, List<Cuarteta> cuerpo) {}
 
     private final AccesoMemoria expresion;
     private final List<Caso> casos;
     private final List<Cuarteta> cuerpoDefault;
-
 
     public Switch1(AccesoMemoria expresion,
                    List<Caso> casos,
@@ -47,6 +60,7 @@ public class Switch1 extends Cuarteta {
         sb.append("    }\n");
     }
 
+    /** Escribe una cuarteta con indentación extra dentro del case. */
     private void escribirIndentado(StringBuilder sb, Cuarteta cuarteta, String prefijo) {
         StringBuilder sub = new StringBuilder();
         cuarteta.aCodigoC(sub);

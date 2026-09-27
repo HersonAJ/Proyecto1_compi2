@@ -7,6 +7,30 @@ import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoSentencia;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Validación de tipos e inferencia de expresiones en .z.
+ *
+ * Validaciones:
+ *   - Índice de arreglo no entero          -> tipoDeExpresion (ACCESO_ARRAY)
+ *   - Índice fuera de rango                -> tipoDeExpresion (ACCESO_ARRAY)
+ *   - Indexar algo que no es arreglo       -> tipoDeExpresion (ACCESO_ARRAY)
+ *   - Acceso inválido a atributo/metodo    -> tipoDeExpresion (ACCESO_ATRIBUTO / LLAMADA_METODO)
+ *   - Atributo no declarado                -> tipoDeExpresion (ACCESO_ATRIBUTO)
+ *   - Tipos incompatibles en binaria       -> tipoResultanteBinaria
+ *   - División/módulo por cero             -> tipoResultanteBinaria
+ *   - Tipos incompatibles en unaria        -> tipoDeExpresion (UNARIA)
+ *   - Operador ++/-- sobre no lvalue       -> tipoDeExpresion (INCREMENTO_DECREMENTO)
+ *   - Condición de ternario no booleana    -> tipoDeExpresion (TERNARIA)
+ *   - Ramas del ternario incompatibles     -> tipoDeExpresion (TERNARIA)
+ *   - Argumentos incompatibles en llamada  -> resolverSobrecarga
+ *   - Llamada ambigua por sobrecarga       -> resolverSobrecarga
+ *   - Inicialización incompatible          -> validarInicializacion
+ *   - Asignación incompatible              -> validarAsignacion
+ *   - Destino de asignación inválido       -> validarAsignacion
+ *   - Condición no booleana                -> validarCondicionBooleana
+ *   - Retorno incompatible                 -> validarRetorno
+ *   - Tipo no permitido en switch          -> validarTipoSwitch
+ */
 public class ValidadorTiposZ {
 
     public record TipoResuelto(String base, int dimensiones) {
@@ -28,7 +52,7 @@ public class ValidadorTiposZ {
         this.errores = errores;
     }
 
-    private boolean esPrimitivo(String tipo) {
+    private boolean esPrimitivo(String tipo) { //True si el tipo es un primitivo (sin contar String)
         return INT.equals(tipo) || DOUBLE.equals(tipo) || CHAR.equals(tipo) || BOOLEAN.equals(tipo);
     }
 
@@ -37,6 +61,7 @@ public class ValidadorTiposZ {
     }
 
     // CALCULO DE TIPO DE UNA EXPRESION
+    /** Devuelve el tipo de una expresión (base + dimensiones). */
     public TipoResuelto tipoDeExpresion(NodoExpr expr) {
         if (expr == null) return null;
 
@@ -47,10 +72,7 @@ public class ValidadorTiposZ {
             case LITERAL_CARACTER -> new TipoResuelto(CHAR, 0);
             case LITERAL_BOOL -> new TipoResuelto(BOOLEAN, 0);
             case LITERAL_NULO -> new TipoResuelto(NULO, 0);
-
-            //el tipo real de una lista literal depende del contexto
             case LISTA_LITERAL -> null;
-
             case IDENTIFICADOR -> {
                 NodoExpr.Identificador id = (NodoExpr.Identificador) expr;
                 Optional<TablaSimbolosZ.SimboloVariable> simbolo = tabla.buscarVariable(id.nombre());
@@ -93,7 +115,7 @@ public class ValidadorTiposZ {
             case ACCESO_ATRIBUTO -> {
                 NodoExpr.AccesoAtributo acceso = (NodoExpr.AccesoAtributo) expr;
                 TipoResuelto tipoObjeto = tipoDeExpresion(acceso.objeto());
-                if (tipoObjeto == null) yield null; //ya reportado en otro lado
+                if (tipoObjeto == null) yield null;
 
                 if (!tipoObjeto.base().equals(tabla.getNombreClase())) {
                     errores.add(new ErrorSemantico(acceso.linea(), acceso.columna(),
@@ -143,8 +165,6 @@ public class ValidadorTiposZ {
 
             case INCREMENTO_DECREMENTO -> {
                 NodoExpr.IncrementoDecremento inc = (NodoExpr.IncrementoDecremento) expr;
-
-                // Validar que el operando sea un lvalue válido (variable, arreglo[índice], objeto.atributo).
                 if (!esLValue(inc.operando())) {
                     errores.add(new ErrorSemantico(inc.linea(), inc.columna(),
                             "Operando inválido",
@@ -194,7 +214,7 @@ public class ValidadorTiposZ {
                 NodoExpr.LlamadaMetodo llamada = (NodoExpr.LlamadaMetodo) expr;
                 TipoResuelto tipoObjeto = tipoDeExpresion(llamada.objeto());
                 List<TipoResuelto> tiposArgs = llamada.argumentos().stream().map(this::tipoDeExpresion).toList();
-                if (tipoObjeto == null) yield null; //ya reportado en otro lado
+                if (tipoObjeto == null) yield null;
 
                 if (!tipoObjeto.base().equals(tabla.getNombreClase())) {
                     errores.add(new ErrorSemantico(llamada.linea(), llamada.columna(),
@@ -210,7 +230,7 @@ public class ValidadorTiposZ {
 
             case INSTANCIA_OBJETO -> {
                 NodoExpr.InstanciaObjeto instancia = (NodoExpr.InstanciaObjeto) expr;
-                if (!instancia.tipoClase().equals(tabla.getNombreClase())) yield null; //ya reportado en ValidadorAlcanceZ
+                if (!instancia.tipoClase().equals(tabla.getNombreClase())) yield null;
 
                 List<TipoResuelto> tiposArgs = instancia.argumentos().stream().map(this::tipoDeExpresion).toList();
                 resolverSobrecarga(tabla.getConstructores(instancia.tipoClase()), tiposArgs,
@@ -233,6 +253,7 @@ public class ValidadorTiposZ {
         };
     }
 
+    /** Calcula el tipo resultado de una operación binaria, reportando incompatibilidades. */
     private TipoResuelto tipoResultanteBinaria(String operador, TipoResuelto izq, TipoResuelto der,
                                                NodoExpr izqExpr, NodoExpr derExpr,
                                                int linea, int columna) {
@@ -281,19 +302,20 @@ public class ValidadorTiposZ {
         };
     }
 
-    private TipoResuelto promocionNumerica(TipoResuelto izq, TipoResuelto der) {
+    private TipoResuelto promocionNumerica(TipoResuelto izq, TipoResuelto der) { /** Promoción numérica: double gana sobre int. */
         return (DOUBLE.equals(izq.base()) || DOUBLE.equals(der.base()))
                 ? new TipoResuelto(DOUBLE, 0) : new TipoResuelto(INT, 0);
     }
 
+    /** Reporta tipos incompatibles en una operación binaria. */
     private void reportarIncompatible(String operador, TipoResuelto izq, TipoResuelto der, int linea, int columna) {
         errores.add(new ErrorSemantico(linea, columna,
                 "Tipo incompatible",
                 "El operador '" + operador + "' no admite '" + izq.base() + "' y '" + der.base() + "'"));
     }
 
-
     // COMPATIBILIDAD Y ASIGNACION
+    /** True si un valor de tipo 'origen' se puede asignar a uno de tipo 'destino'. */
     private boolean esAsignable(TipoResuelto destino, TipoResuelto origen) {
         if (NULO.equals(origen.base())) {
             return !esPrimitivo(destino.base());
@@ -306,6 +328,7 @@ public class ValidadorTiposZ {
         return DOUBLE.equals(destino.base()) && INT.equals(origen.base());
     }
 
+    /** Valida que una inicialización sea compatible con el tipo declarado. */
     public void validarInicializacion(String tipoDeclarado, int dimensionesDeclaradas, NodoExpr inicializacion) {
         if (inicializacion == null) return;
 
@@ -333,7 +356,7 @@ public class ValidadorTiposZ {
         }
     }
 
-    //Valida una asignación. Maneja tanto '=' como '+=' '-=' '*='.
+    /** Valida una asignación simple o compuesta. */
     public void validarAsignacion(String operador, NodoExpr destino, NodoExpr valor) {
 
         if (!esLValue(destino)) {
@@ -347,7 +370,7 @@ public class ValidadorTiposZ {
         TipoResuelto tipoValor = tipoDeExpresion(valor);
         if (tipoDestino == null || tipoValor == null) return;
 
-        // Asignación simple: el valor debe ser asignable al destino.
+        // Asignación simple.
         if ("=".equals(operador)) {
             if (!esAsignable(tipoDestino, tipoValor)) {
                 errores.add(new ErrorSemantico(valor.linea(), valor.columna(),
@@ -357,9 +380,7 @@ public class ValidadorTiposZ {
             return;
         }
 
-        // Asignación compuesta: la operación debe dar un tipo asignable al destino.
-        // Para '+=' con String, la operación es concatenación.
-        // Para '-=' y '*=', la operación es aritmética.
+        // Asignación compuesta: simular la operación binaria.
         String operadorBinario = switch (operador) {
             case "+=" -> "+";
             case "-=" -> "-";
@@ -369,13 +390,11 @@ public class ValidadorTiposZ {
 
         if (operadorBinario == null) return;
 
-        // Calcular el tipo resultante de la operación simulada.
         TipoResuelto tipoResultado = tipoResultanteBinaria(
                 operadorBinario, tipoDestino, tipoValor, destino, valor, destino.linea(), destino.columna());
 
         if (tipoResultado == null) return;
 
-        // El resultado debe ser asignable al destino.
         if (!esAsignable(tipoDestino, tipoResultado)) {
             errores.add(new ErrorSemantico(valor.linea(), valor.columna(),
                     "Tipo incompatible",
@@ -384,6 +403,7 @@ public class ValidadorTiposZ {
         }
     }
 
+    /** Valida que una condición sea de tipo boolean. */
     public void validarCondicionBooleana(NodoExpr condicion) {
         TipoResuelto tipo = tipoDeExpresion(condicion);
         if (tipo != null && !BOOLEAN.equals(tipo.base())) {
@@ -393,6 +413,7 @@ public class ValidadorTiposZ {
         }
     }
 
+    /** Valida que un 'return' sea compatible con el tipo de retorno del método. */
     public void validarRetorno(NodoSentencia.Retorno retorno, String tipoRetornoEsperado) {
         if (tipoRetornoEsperado == null) {
             if (retorno.valor() != null) {
@@ -416,6 +437,8 @@ public class ValidadorTiposZ {
     }
 
     // RESOLUCION DE SOBRECARGA
+
+    /** Resuelve la firma que coincide con los tipos de argumentos dados. */
     private TablaSimbolosZ.Firma resolverSobrecarga(List<TablaSimbolosZ.Firma> firmas, List<TipoResuelto> tiposArgs,
                                                     int linea, int columna, String nombre, String tipoElemento) {
         if (firmas.isEmpty()) {
@@ -425,11 +448,11 @@ public class ValidadorTiposZ {
         }
         if (tiposArgs.stream().anyMatch(java.util.Objects::isNull)) return null;
 
-        //1. intento de coincidencia exacta
+        // 1. Coincidencia exacta.
         for (TablaSimbolosZ.Firma f : firmas) {
             if (coincideExacto(f, tiposArgs)) return f;
         }
-        //2. intento permitiendo la promocion int -> double
+        // 2. Coincidencia con promoción int -> double.
         List<TablaSimbolosZ.Firma> candidatas = firmas.stream().filter(f -> coincideConPromocion(f, tiposArgs)).toList();
         if (candidatas.size() == 1) return candidatas.get(0);
         if (candidatas.size() > 1) {
@@ -443,6 +466,7 @@ public class ValidadorTiposZ {
         return null;
     }
 
+    /** Compara firma y argumentos por igualdad exacta de tipos. */
     private boolean coincideExacto(TablaSimbolosZ.Firma f, List<TipoResuelto> tiposArgs) {
         if (f.parametros().size() != tiposArgs.size()) return false;
         for (int i = 0; i < tiposArgs.size(); i++) {
@@ -454,6 +478,7 @@ public class ValidadorTiposZ {
         return true;
     }
 
+    /** Compara firma y argumentos permitiendo promoción. */
     private boolean coincideConPromocion(TablaSimbolosZ.Firma f, List<TipoResuelto> tiposArgs) {
         if (f.parametros().size() != tiposArgs.size()) return false;
         for (int i = 0; i < tiposArgs.size(); i++) {
@@ -464,8 +489,8 @@ public class ValidadorTiposZ {
         return true;
     }
 
-    //Determina si una expresión puede ser destino de ++/-- o de una asignación.
-    //Solo los identificadores, accesos a arreglo y accesos a atributo son válidos.
+    // HELPERS
+    /** True si la expresión puede ser destino de ++/-- o de una asignación. */
     private boolean esLValue(NodoExpr expr) {
         if (expr == null) return false;
         return switch (expr.tipoNodo()) {
@@ -474,10 +499,10 @@ public class ValidadorTiposZ {
         };
     }
 
-    //Valida que la expresión de un switch sea de un tipo permitido: int, char, String o boolean.
+    /** Valida que la expresión de un switch sea int, char, String o boolean. */
     public void validarTipoSwitch(NodoExpr expresion) {
         TipoResuelto tipo = tipoDeExpresion(expresion);
-        if (tipo == null) return; // error previo
+        if (tipo == null) return;
 
         String base = tipo.base();
         boolean valido = INT.equals(base)
@@ -493,7 +518,6 @@ public class ValidadorTiposZ {
         }
     }
 
-    //Determina si una expresión es el literal entero 0.
     private boolean esCeroLiteral(NodoExpr expr) {
         return expr instanceof NodoExpr.LiteralEntero lit && lit.valor() == 0;
     }

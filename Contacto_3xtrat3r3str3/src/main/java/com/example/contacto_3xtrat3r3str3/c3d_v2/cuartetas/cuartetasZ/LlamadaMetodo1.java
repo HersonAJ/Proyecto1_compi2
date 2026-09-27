@@ -6,11 +6,12 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 import java.util.List;
 
 /**
- * Llamada a metodo con receptor explícito:
- *   obj.metodo(args)
- * Se traduce a:
- *   Clase_metodo_<tipos>(obj, args)
- * donde 'obj' es el receptor, que va como primer argumento.
+ * Cuarteta: t0 = Persona_metodo_tipo(p, args)      (con retorno)
+ *           Persona_metodo_tipo(p, args)           (void)
+ *
+ * Llama a un método con receptor explícito. El receptor va como primer argumento.
+ * Ejemplo en .z: p1.saludar()
+ * C generado:    Persona_saludar(p1);
  */
 public class LlamadaMetodo1 extends Cuarteta {
 

@@ -3,8 +3,11 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.AccesoMemoria;
 
 /**
- * Literal del lenguaje Z.
- * Tipos soportados: "int", "double", "char", "boolean", "String".
+ * Operando: 10, 3.14, 'a', "hola", true, false
+ *
+ * Literal de .z. Se escribe tal cual en C según su tipo.
+ * Ejemplo en .z: 25
+ * C generado:    25
  */
 public class LiteralZ extends AccesoMemoria {
 

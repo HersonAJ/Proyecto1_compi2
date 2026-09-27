@@ -1,12 +1,12 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 /**
- * Acceso a un arreglo ya aplanado:
- *   a[i]        ->  a[i]
- *   m[i][j]     ->  m[i * COLS + j]
+ * Operando: a[i]  o  m[i][j]
  *
- * Para simplificar, el AST se encarga de aplanar matrices antes de crear
- * este acceso. Aquí solo tratamos arreglos lineales.
+ * Acceso a un elemento de arreglo. En .y y .z cada nivel de acceso genera
+ * un AccesoArreglo anidado, así 'm[i][j]' queda como m[i][j] en C.
+ * Ejemplo en .y: numeros[2]
+ * C generado:    numeros[2]
  */
 public class AccesoArreglo extends AccesoMemoria {
 

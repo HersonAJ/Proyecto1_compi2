@@ -4,7 +4,6 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.c.z.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.cuartetasZ.*;
 import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.*;
 import com.example.contacto_3xtrat3r3str3.zetariano.semantica.TablaSimbolosZ;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +32,7 @@ public sealed interface NodoExpr extends NodoAST permits
     AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx);
 
     // LITERALES
+    /** '10'  ->  operando literal entero. */
     record LiteralEntero(int linea, int columna, int valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_ENTERO; }
 
@@ -42,6 +42,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** '3.14'  ->  operando literal double. */
     record LiteralDecimal(int linea, int columna, double valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_DECIMAL; }
 
@@ -51,6 +52,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** '"hola"'  ->  operando literal String. */
     record LiteralCadena(int linea, int columna, String valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CADENA; }
 
@@ -60,6 +62,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'a'  ->  operando literal char. */
     record LiteralCaracter(int linea, int columna, char valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_CARACTER; }
 
@@ -69,6 +72,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'true' / 'false'  ->  operando literal boolean. */
     record LiteralBool(int linea, int columna, boolean valor) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_BOOL; }
 
@@ -78,6 +82,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'null'  ->  operando LiteralNuloZ. */
     record LiteralNulo(int linea, int columna) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LITERAL_NULO; }
 
@@ -87,7 +92,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    //El inicializador '{10, 20, 30}' de un arreglo. Solo aparece como parte de una DeclaracionVariable, nunca suelto en medio de una expresion normal
+    /** '{10, 20, 30}'  ->  solo válido como inicializador de declaración. */
     record ListaLiteral(int linea, int columna, List<NodoExpr> elementos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LISTA_LITERAL; }
 
@@ -100,16 +105,15 @@ public sealed interface NodoExpr extends NodoAST permits
     }
 
     // ACCESOS
+    /** 'x'  ->  acceso a atributo  */
     record Identificador(int linea, int columna, String nombre) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.IDENTIFICADOR; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
-            // ¿Es un atributo de la clase?
             var atributoOpt = ctx.getTabla().buscarAtributo(nombre);
             if (atributoOpt.isPresent()) {
                 var attr = atributoOpt.get();
-                // this->nombre
                 AccesoVariable thisAcc = new AccesoVariable("this", "struct " + ctx.getNombreClase() + "*");
                 return new AccesoAtributo1(thisAcc, nombre, true, attr.tipo());
             }
@@ -126,7 +130,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // 'numeros[0]', 'matriz[i][j]'
+    /** 'a[i]'  ->  operando AccesoArreglo (con su tipo de elemento inferido). */
     record AccesoArray(int linea, int columna, NodoExpr arreglo, NodoExpr indice) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ARRAY; }
 
@@ -134,79 +138,48 @@ public sealed interface NodoExpr extends NodoAST permits
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             AccesoMemoria base = arreglo.aCodigoIntermedio(ctx);
             AccesoMemoria indiceAcc = indice.aCodigoIntermedio(ctx);
-
-            // Tipo del elemento: si la base es 'int**', el elemento es 'int*'.
-            // Si es 'int*', el elemento es 'int'.
             String tipoBase = base.getTipo();
             String tipoElemento;
             if (tipoBase.endsWith("*")) {
                 tipoElemento = tipoBase.substring(0, tipoBase.length() - 1);
             } else {
-                tipoElemento = "int"; // fallback
+                tipoElemento = "int";
             }
-
             return new AccesoArreglo(base, indiceAcc, tipoElemento);
-        }
-
-        private String obtenerTipoBase(ContextoTraduccionZ ctx, NodoExpr baseExpr) {
-            if (baseExpr instanceof Identificador id) {
-                // Buscar como atributo primero
-                var attr = ctx.getTabla().buscarAtributo(id.nombre());
-                if (attr.isPresent()) return attr.get().tipo();
-                // Buscar como variable
-                var v = ctx.getTabla().buscarVariable(id.nombre());
-                if (v.isPresent()) return v.get().tipo();
-            }
-            return "int";
-        }
-
-        private int obtenerDimensiones(ContextoTraduccionZ ctx, NodoExpr baseExpr) {
-            if (baseExpr instanceof Identificador id) {
-                var attr = ctx.getTabla().buscarAtributo(id.nombre());
-                if (attr.isPresent()) return attr.get().dimensiones();
-                var v = ctx.getTabla().buscarVariable(id.nombre());
-                if (v.isPresent()) return v.get().dimensiones();
-            }
-            return 1;
         }
     }
 
-    // 'p1.edad'
+    /** 'p1.edad'  ->  operando AccesoAtributo1 (siempre con '->' en .z). */
     record AccesoAtributo(int linea, int columna, NodoExpr objeto, String atributo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ACCESO_ATRIBUTO; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             AccesoMemoria base = objeto.aCodigoIntermedio(ctx);
-
             String tipoCampo = obtenerTipoCampo(ctx, atributo);
-
-            // En .z, todos los accesos a atributos son a través de puntero.
             return new AccesoAtributo1(base, atributo, true, tipoCampo);
         }
 
+        /** Busca el tipo del campo en la clase actual. */
         private String obtenerTipoCampo(ContextoTraduccionZ ctx, String campo) {
-            // Buscar el atributo en la clase actual.
             var attr = ctx.getTabla().buscarAtributo(campo);
             if (attr.isPresent()) return attr.get().tipo();
-            return "int"; // fallback
+            return "int";
         }
     }
 
     // OPERACIONES
-    // +, -, *, /, %, ==, !=, <, >, <=, >=, &&, ||
+    /** 'a + b', 'a == b', ...  ->  promociones / strcmp / concat + OperacionBinaria. */
     record Binaria(int linea, int columna, String operador, NodoExpr izquierda, NodoExpr derecha) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.BINARIA; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             AccesoMemoria izq = izquierda.aCodigoIntermedio(ctx);
             AccesoMemoria der = derecha.aCodigoIntermedio(ctx);
 
             boolean hayString = "String".equals(izq.getTipo()) || "String".equals(der.getTipo());
-
             // Caso especial: '+' con String -> concatenación
             if ("+".equals(operador) && hayString) {
                 int idT = g.getContador().siguienteTemporal("String");
@@ -221,14 +194,11 @@ public sealed interface NodoExpr extends NodoAST permits
                 int idCmp = g.getContador().siguienteTemporal("int");
                 AccesoTemporal tCmp = new AccesoTemporal(idCmp, "int");
                 g.emitir(new OperacionBinaria(tCmp, izq, "strcmp", der));
-
                 int idRes = g.getContador().siguienteTemporal("int");
                 AccesoTemporal tRes = new AccesoTemporal(idRes, "int");
                 g.emitir(new OperacionBinaria(tRes, tCmp, operador, new LiteralZ(0, "int")));
                 return tRes;
             }
-
-            // Promoción de tipos
             PromocionTiposZ.Resultado prom = PromocionTiposZ.promover(izq.getTipo(), der.getTipo());
 
             if (prom.conversionIzq() != null) {
@@ -251,16 +221,14 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    // -x, !x (unario puro, no modifica la variable)
+    /** '-x', '!x'  ->  OperacionUnaria con temporal. */
     record Unaria(int linea, int columna, String operador, NodoExpr operando) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.UNARIA; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             AccesoMemoria op = operando.aCodigoIntermedio(ctx);
-
             int idT = g.getContador().siguienteTemporal(op.getTipo());
             AccesoTemporal t = new AccesoTemporal(idT, op.getTipo());
             g.emitir(new OperacionUnaria(t, operador, op));
@@ -268,7 +236,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    //++x, --x, x++, x--
+    /** '++x', '--x', 'x++', 'x--'  ->  x = x ± 1 (como OperacionBinaria). */
     record IncrementoDecremento(int linea, int columna, String operador,
                                 NodoExpr operando, boolean prefijo) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INCREMENTO_DECREMENTO; }
@@ -276,19 +244,15 @@ public sealed interface NodoExpr extends NodoAST permits
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             AccesoMemoria op = operando.aCodigoIntermedio(ctx);
-
             String opBinario = "++".equals(operador) ? "+" : "-";
             AccesoMemoria uno = new LiteralZ(1, "int");
-
             g.emitir(new OperacionBinaria(op, op, opBinario, uno));
-
             return op;
         }
     }
 
-    // condicion ? siVerdadero : siFalso
+    /** 'cond ? a : b'  ->  if/else con temporal que recibe a o b. */
     record Ternaria(int linea, int columna, NodoExpr condicion,
                     NodoExpr siVerdadero, NodoExpr siFalso) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.TERNARIA; }
@@ -326,8 +290,6 @@ public sealed interface NodoExpr extends NodoAST permits
 
             // 6. Fin
             g.emitir(new DefinicionEtiqueta(lFin));
-
-            // 7. Corregir el tipo del temporal según los tipos reales.
             String tipoComun = PromocionTiposZ.promover(valorSi.getTipo(), valorNo.getTipo())
                     .tipoResultado();
             c.registrarTipoTemporal(idT, tipoComun);
@@ -337,7 +299,7 @@ public sealed interface NodoExpr extends NodoAST permits
     }
 
     // LLAMADAS Y CREACION DE OBJETOS
-    // Llamada sin objeto explicito: 'calcular(x)'
+    /** 'calcular(x)'  ->  Llamada con 'this' como primer argumento. */
     record LlamadaFuncion(int linea, int columna, String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_FUNCION; }
 
@@ -351,10 +313,9 @@ public sealed interface NodoExpr extends NodoAST permits
                 args.add(arg.aCodigoIntermedio(ctx));
             }
 
-            // 2. Resolver la firma del método (por cantidad y tipos).
+            // 2. Resolver la firma del metodo (por cantidad y tipos).
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
-
             var firmaOpt = ctx.getTabla().buscarMetodo(nombre, tiposArgs);
             if (firmaOpt.isEmpty()) {
                 throw new IllegalStateException(
@@ -366,18 +327,16 @@ public sealed interface NodoExpr extends NodoAST permits
             // 3. Construir nombre único en C.
             String nombreC = construirNombreC(ctx.getNombreClase(), nombre, firma);
 
-            // 4. Determinar si el método retorna algo.
+            // 4. Determinar si el metodo retorna algo.
             String tipoRetorno = firma.tipoRetorno(); // null si void
 
             // 5. Emitir la llamada.
             if (tipoRetorno == null) {
-                // Método void: no creamos temporal.
                 AccesoVariable thisAcc = new AccesoVariable("this",
                         "struct " + ctx.getNombreClase() + "*");
                 g.emitir(new Llamada(null, nombreC, juntarThisConArgs(thisAcc, args)));
                 return null;
             } else {
-                // Método con retorno: creamos temporal.
                 int idT = g.getContador().siguienteTemporal(tipoRetorno);
                 AccesoTemporal t = new AccesoTemporal(idT, tipoRetorno);
 
@@ -395,6 +354,7 @@ public sealed interface NodoExpr extends NodoAST permits
             return todos;
         }
 
+        /** Nombre C: Clase_metodo_tipo1_tipo2. */
         private String construirNombreC(String clase, String metodo, TablaSimbolosZ.Firma firma) {
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append('_').append(metodo);
@@ -405,7 +365,7 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    //'p1.saludar()', 'p1.calcularAnioNacimiento(2026)'
+    /** 'p1.saludar()'  ->  LlamadaMetodo1 con el receptor como primer argumento. */
     record LlamadaMetodo(int linea, int columna, NodoExpr objeto,
                          String nombre, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.LLAMADA_METODO; }
@@ -424,7 +384,7 @@ public sealed interface NodoExpr extends NodoAST permits
             // 2. Nombre de la clase del receptor.
             String claseReceptor = obtenerNombreClase(receptorAcc);
 
-            // 3. Resolver firma del método.
+            // 3. Resolver firma del metodo.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
 
@@ -452,19 +412,19 @@ public sealed interface NodoExpr extends NodoAST permits
             }
         }
 
+        /** Extrae 'Nombre' de 'struct Nombre*' o 'struct Nombre'. */
         private String obtenerNombreClase(AccesoMemoria acceso) {
             String tipo = acceso.getTipo();
-            // Si es "struct Nombre*", extraer "Nombre"
             if (tipo.startsWith("struct ") && tipo.endsWith("*")) {
                 return tipo.substring("struct ".length(), tipo.length() - 1).trim();
             }
-            // Si es "struct Nombre", extraer "Nombre"
             if (tipo.startsWith("struct ")) {
                 return tipo.substring("struct ".length()).trim();
             }
             return tipo;
         }
 
+        /** Nombre C: Clase_metodo_tipo1_tipo2. */
         private String construirNombreC(String clase, String metodo, TablaSimbolosZ.Firma firma) {
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append('_').append(metodo);
@@ -475,24 +435,21 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
-    //'new Persona("Carlos", 25)'
+    /** 'new Persona(...)'  ->  NewObjeto (malloc + constructor). */
     record InstanciaObjeto(int linea, int columna, String tipoClase, List<NodoExpr> argumentos) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.INSTANCIA_OBJETO; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             // 1. Evaluar argumentos.
             List<AccesoMemoria> args = new ArrayList<>();
             for (NodoExpr arg : argumentos) {
                 args.add(arg.aCodigoIntermedio(ctx));
             }
-
             // 2. Resolver firma del constructor.
             List<String> tiposArgs = new ArrayList<>();
             for (AccesoMemoria a : args) tiposArgs.add(a.getTipo());
-
             var firmaOpt = ctx.getTabla().buscarConstructor(tipoClase, tiposArgs);
             if (firmaOpt.isEmpty()) {
                 throw new IllegalStateException(
@@ -500,20 +457,18 @@ public sealed interface NodoExpr extends NodoAST permits
                                 + tiposArgs + " (línea " + linea + ")");
             }
             var firma = firmaOpt.get();
-
-            // 3. Nombre C del constructor: Clase_constructor_tipos
+            // 3. Nombre C del constructor.
             String nombreConstructorC = construirNombreConstructorC(tipoClase, firma);
-
-            // 4. Temporal del tipo Clase*.
+            // 4. Temporal del tipo Clase.
             String tipoC = "struct " + tipoClase + "*";
             int idT = g.getContador().siguienteTemporal(tipoC);
             AccesoTemporal t = new AccesoTemporal(idT, tipoC);
-
             // 5. Emitir.
             g.emitir(new NewObjeto(t, tipoClase, nombreConstructorC, args));
             return t;
         }
 
+        /** Nombre C: Clase_constructor_tipo1_tipo2. */
         private String construirNombreConstructorC(String clase, TablaSimbolosZ.Firma firma) {
             StringBuilder sb = new StringBuilder();
             sb.append(clase).append("_constructor");
@@ -524,13 +479,13 @@ public sealed interface NodoExpr extends NodoAST permits
         }
     }
 
+    /** 'new int[N]'  ->  NewArreglo (malloc).  'new int[A][B]'  ->  NewArregloMulti. */
     record ArregloNuevo(int linea, int columna, String tipoBase, List<NodoExpr> dimensiones) implements NodoExpr {
         @Override public TipoNodoExpr tipoNodo() { return TipoNodoExpr.ARREGLO_NUEVO; }
 
         @Override
         public AccesoMemoria aCodigoIntermedio(ContextoTraduccionZ ctx) {
             GestorCodigoIntermedio g = ctx.getGestor();
-
             // Contar dimensiones con tamaño explícito.
             List<AccesoMemoria> tamanos = new ArrayList<>();
             for (NodoExpr dim : dimensiones) {
@@ -552,13 +507,9 @@ public sealed interface NodoExpr extends NodoAST permits
             } else {
                 tipoElementoC = "struct " + tipoBase;
             }
-
-            // Tipo del temporal: un '*' por dimensión.
             String tipoTemporal = tipoElementoC + "*".repeat(tamanos.size());
-
             int idT = g.getContador().siguienteTemporal(tipoTemporal);
             AccesoTemporal t = new AccesoTemporal(idT, tipoTemporal);
-
             if (tamanos.size() == 1) {
                 g.emitir(new NewArreglo(t, tipoElementoC, tamanos.get(0)));
             } else {

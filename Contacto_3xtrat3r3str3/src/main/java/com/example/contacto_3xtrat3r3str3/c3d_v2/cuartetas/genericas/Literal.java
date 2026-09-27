@@ -1,12 +1,11 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 /**
- * Literal de cualquier tipo primitivo.
- * - Entero: 10
- * - Flotante: 3.14
- * - Caracter: 'a'
- * - Cadena: "hola"
- * - Bool: 1 / 0
+ * Operando: 10, 3.14, 'a', "hola", 1/0
+ *
+ * Literal de cualquier tipo primitivo de .y.
+ * Ejemplo en .y: 25
+ * C generado:    25
  */
 public class Literal extends AccesoMemoria {
 

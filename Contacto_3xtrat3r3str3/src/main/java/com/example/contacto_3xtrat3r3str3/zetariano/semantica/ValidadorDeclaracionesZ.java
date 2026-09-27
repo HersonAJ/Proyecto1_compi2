@@ -6,6 +6,17 @@ import com.example.contacto_3xtrat3r3str3.zetariano.nodo.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Declara símbolos en la tabla para .z.
+ *
+ * Validaciones:
+ *   - Atributo duplicado                    -> declararAtributos
+ *   - Constructor con nombre incorrecto     -> declararConstructores
+ *   - Constructor duplicado (misma firma)   -> declararConstructores
+ *   - Metodo duplicado (misma firma)        -> declararMetodos
+ *   - Parámetro duplicado                   -> construirParametros
+ *   - Variable local duplicada              -> declararVariable
+ */
 public class ValidadorDeclaracionesZ {
 
     private final TablaSimbolosZ tabla;
@@ -16,10 +27,12 @@ public class ValidadorDeclaracionesZ {
         this.errores = errores;
     }
 
+    /** Declara el nombre de la clase en la tabla. */
     public void declararClase(NodoClase clase) {
         tabla.declararClase(clase.nombre());
     }
 
+    /** Declara todos los atributos de la clase. */
     public void declararAtributos(NodoClase clase) {
         for (NodoAtributoZ a: clase.atributos()) {
             if (!tabla.declararAtributo(a.nombre(), a.tipo(), a.dimensiones())) {
@@ -29,9 +42,10 @@ public class ValidadorDeclaracionesZ {
         }
     }
 
+    /** Declara los constructores validando nombre y firma. */
     public void declararConstructores(NodoClase clase) {
         for (NodoConstructor c : clase.constructores()) {
-            //el nombre del constructor debe coincidir con el nombre de la clase
+            // El nombre del constructor debe coincidir con el nombre de la clase.
             if (!c.nombre().equals(clase.nombre())) {
                 errores.add(new ErrorSemantico(c.linea(), c.columna(), "Constructor invalido",
                         "'" + c.nombre() + "' no coincide con el nombre de la clase '" + clase.nombre() + "'"));
@@ -46,6 +60,7 @@ public class ValidadorDeclaracionesZ {
         }
     }
 
+    /** Declara los métodos de la clase. */
     public void declararMetodos(NodoClase clase) {
         for (NodoMetodo m : clase.metodos()) {
             List<TablaSimbolosZ.Parametro> parametros = construirParametros(m.parametros(), m.nombre());
@@ -53,10 +68,10 @@ public class ValidadorDeclaracionesZ {
                 errores.add(new ErrorSemantico(m.linea(), m.columna(), "Declaracion duplicada",
                         "Ya existe un metodo '" +  m.nombre() + "' con esa misma firma"));
             }
-
         }
     }
 
+    /** Convierte los nodos de parámetros en la representación de la tabla. */
     private List<TablaSimbolosZ.Parametro> construirParametros(List<NodoParametroZ> nodos, String nombreDueño) {
         List<TablaSimbolosZ.Parametro> parametros = new ArrayList<>();
         for (NodoParametroZ p : nodos) {
@@ -71,13 +86,14 @@ public class ValidadorDeclaracionesZ {
         return parametros;
     }
 
-    //registrar los parametros como variables del scope local, al entrar al cuerpo de un constructor/metod
+    /** Registra los parámetros como variables en el scope local. */
     public void declararParametrosEnScope(List<NodoParametroZ> parametros) {
         for (NodoParametroZ p : parametros) {
             tabla.declararVariable(p.nombre(), p.tipo());
         }
     }
 
+    /** Declara una variable local calculando su tamaño si es arreglo. */
     public void declararVariable(NodoSentencia.DeclaracionVariable d) {
         Integer tamanoConocido = calcularTamanoConocido(d.inicializacion());
         if (!tabla.declararVariable(d.nombre(), d.tipo(), d.dimensiones(), tamanoConocido)) {
@@ -86,6 +102,7 @@ public class ValidadorDeclaracionesZ {
         }
     }
 
+    /** Calcula el tamaño conocido de un arreglo a partir de su inicializador. */
     private Integer calcularTamanoConocido(NodoExpr inicializacion) {
         if (inicializacion == null) return null;
 

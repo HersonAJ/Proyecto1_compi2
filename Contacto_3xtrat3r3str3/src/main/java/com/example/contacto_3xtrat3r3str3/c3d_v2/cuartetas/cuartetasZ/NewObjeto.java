@@ -6,9 +6,13 @@ import com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas.Cuarteta;
 import java.util.List;
 
 /**
- * Instanciación de objeto: 'new Persona("Carlos", 25)'.
- *   struct Persona* t0 = malloc(sizeof(struct Persona));
- *   Persona_constructor_String_int(t0, "Carlos", 25);
+ * Cuarteta: t0 = new Persona("Carlos", 25)
+ *
+ * Reserva memoria en heap y llama al constructor.
+ * Ejemplo en .z: Persona p = new Persona("Carlos", 25)
+ * C generado:
+ *     struct Persona* t0 = malloc(sizeof(struct Persona));
+ *     Persona_constructor_String_int(t0, "Carlos", 25);
  */
 public class NewObjeto extends Cuarteta {
 
@@ -18,9 +22,9 @@ public class NewObjeto extends Cuarteta {
     private final List<AccesoMemoria> argumentos;
 
     public NewObjeto(AccesoMemoria destino,
-                      String nombreClase,
-                      String nombreConstructorC,
-                      List<AccesoMemoria> argumentos) {
+                     String nombreClase,
+                     String nombreConstructorC,
+                     List<AccesoMemoria> argumentos) {
         this.destino = destino;
         this.nombreClase = nombreClase;
         this.nombreConstructorC = nombreConstructorC;

@@ -1,7 +1,11 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 /**
- * x = y
+ * Cuarteta: x = y
+ *
+ * Asigna un valor a una variable, atributo o posición de arreglo.
+ * Ejemplo en .y: contador = 5
+ * C generado:    contador = 5;
  */
 public class AsignacionVariable extends Cuarteta {
 

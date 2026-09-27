@@ -2,8 +2,12 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 
 /**
- * return;          (Retorno sin valor)
- * return valor;    (Retorno con valor)
+ * Cuarteta: return valor       (con valor)
+ *           return             (void)
+ *
+ * Retorno de una función o metodo. El valor puede ser null si no retorna nada.
+ * Ejemplo en .y: retornar a + b
+ * C generado:    return t0;
  */
 public class Retorno1 extends Cuarteta {
 

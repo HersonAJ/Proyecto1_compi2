@@ -5,6 +5,15 @@ import com.example.contacto_3xtrat3r3str3.zetariano.nodo.NodoExpr;
 
 import java.util.List;
 
+/**
+ * Validador de alcance para .z.
+ * Verifica que los identificadores y tipos usados existan.
+ *
+ * Validaciones:
+ *   - Identificador no declarado    -> resolverNombre
+ *   - Clase no declarada en 'novus' -> resolverExpresion (INSTANCIA_OBJETO)
+ *   - Tipo declarado no válido      -> validarTipoDeclarado
+ */
 public class ValidadorAlcanceZ {
 
     private final TablaSimbolosZ tabla;
@@ -16,6 +25,7 @@ public class ValidadorAlcanceZ {
         this.errores = errores;
     }
 
+    /** Recorre una expresión resolviendo identificadores y tipos. */
     public void resolverExpresion(NodoExpr expr) {
         if (expr == null) return;
 
@@ -53,7 +63,7 @@ public class ValidadorAlcanceZ {
             case LLAMADA_FUNCION -> {
                 NodoExpr.LlamadaFuncion llamada = (NodoExpr.LlamadaFuncion) expr;
                 for (NodoExpr arg : llamada.argumentos()) {
-
+                    resolverExpresion(arg);
                 }
             }
 
@@ -86,10 +96,12 @@ public class ValidadorAlcanceZ {
         }
     }
 
+    /** Resuelve un identificador buscando su nombre en la tabla. */
     public void resolverIdentificador(NodoExpr.Identificador id) {
         resolverNombre(id.nombre(), id.linea(), id.columna());
     }
 
+    /** Reporta error si el nombre no es variable ni atributo de la clase. */
     public void resolverNombre(String nombre, int linea, int columna) {
         if (tabla.buscarVariable(nombre).isEmpty()) {
             errores.add(new ErrorSemantico(linea, columna, "Identificador no declarado",
@@ -97,9 +109,9 @@ public class ValidadorAlcanceZ {
         }
     }
 
-    //Valida que un tipo declarado (de variable, parametro o atributo) sea primitivo o la clase conocida.
+    /** Valida que un tipo sea primitivo o la clase conocida. */
     public void validarTipoDeclarado(String tipo, int linea, int columna) {
-        if (tipo == null) return; //tipo void en un metodo, no aplica
+        if (tipo == null) return; // tipo void en un metodo, no aplica
         if (PRIMITIVOS.contains(tipo)) return;
         if (tipo.equals(tabla.getNombreClase())) return;
 

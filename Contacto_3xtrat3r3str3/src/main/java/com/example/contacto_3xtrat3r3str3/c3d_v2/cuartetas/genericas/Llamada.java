@@ -4,9 +4,12 @@ package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 import java.util.List;
 
 /**
- * Llamada a función.
- *   Con destino:    t0 = suma(a, b);
- *   Sin destino:    imprimir(x);   (o cualquier función sin retorno)
+ * Cuarteta: t0 = suma(a, b)      (con retorno)
+ *           imprimir(x)          (sin retorno)
+ *
+ * Llamada a función. El destino puede ser null si la función es void.
+ * Ejemplo en .y: suma(10, 20)
+ * C generado:    t0 = suma(10, 20);
  */
 public class Llamada extends Cuarteta {
 

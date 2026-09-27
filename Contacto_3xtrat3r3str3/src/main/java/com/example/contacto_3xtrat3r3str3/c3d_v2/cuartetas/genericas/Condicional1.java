@@ -1,9 +1,12 @@
 package com.example.contacto_3xtrat3r3str3.c3d_v2.cuartetas.genericas;
 
 /**
- * if (a op b) goto Lx;
- * Se usa para saltar a una etiqueta cuando la comparación es verdadera.
+ * Cuarteta: if (a op b) goto Lx
+ *
+ * Salto condicional: si la comparación es verdadera, salta a la etiqueta.
  * Se complementa con Salto para el caso falso.
+ * Ejemplo en .y: si (x > 0) entonces ...
+ * C generado:    if (x > 0) goto L0;
  */
 public class Condicional1 extends Cuarteta {
 
