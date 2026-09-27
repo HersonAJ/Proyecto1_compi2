@@ -19,10 +19,8 @@ public class MenuPrincipal {
     public Runnable onDescargarArchivo;
     public Runnable onDescargarCarpeta;
     public Runnable onSalir;
+    public Runnable onAnalizar;
     public Runnable onCompilar;
-    public Runnable onGenerarCuartetas;
-    public Runnable onGenerarC3D;
-    public Runnable onTraducirAC;
 
     public MenuPrincipal(Stage stage) {
         barra = new MenuBar();
@@ -60,11 +58,8 @@ public class MenuPrincipal {
         // -------- Ejecutar --------
         Menu ejecutar = new Menu("Ejecutar");
         ejecutar.getItems().addAll(
-                item("Compilar",          () -> ejecutar(onCompilar)),
-                new SeparatorMenuItem(),
-                item("Generar cuartetas", () -> ejecutar(onGenerarCuartetas)),
-                item("Generar C3D",       () -> ejecutar(onGenerarC3D)),
-                item("Traducir a C",      () -> ejecutar(onTraducirAC))
+                item("Analizar",  () -> ejecutar(onAnalizar)),
+                item("Compilar",  () -> ejecutar(onCompilar))
         );
 
         // -------- Ayuda --------

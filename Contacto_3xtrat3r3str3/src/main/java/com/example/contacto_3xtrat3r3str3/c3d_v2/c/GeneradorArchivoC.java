@@ -7,11 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/**
- * Escribe un archivo .c y lo compila con gcc.
- * Mismo enfoque que el proyecto PigLatin: guarda en la raíz del proyecto
- * y lanza gcc con ProcessBuilder.
- */
 public class GeneradorArchivoC {
 
     private final String nombreArchivo;
@@ -26,22 +21,15 @@ public class GeneradorArchivoC {
         this.nombreEjecutable = nombreEjecutable;
     }
 
-    /**
-     * Escribe el contenido dado en el .c y lo compila con gcc.
-     * Devuelve true si la compilación fue exitosa.
-     */
-    public boolean generarYCompilar(String codigoC) {
-        String dirProyecto = System.getProperty("user.dir");
-        Path rutaArchivo = Paths.get(dirProyecto, nombreArchivo);
-
+    public boolean generarYCompilar(String codigoC, Path rutaC, Path rutaExe) {
         try {
-            Files.writeString(rutaArchivo, codigoC);
-            System.out.println("[OK] Archivo .c escrito en: " + rutaArchivo.toAbsolutePath());
+            Files.writeString(rutaC, codigoC);
+            System.out.println("[OK] Archivo .c escrito en: " + rutaC.toAbsolutePath());
 
             ProcessBuilder pb = new ProcessBuilder(
-                    "gcc", nombreArchivo, "-o", nombreEjecutable
+                    "gcc", rutaC.getFileName().toString(), "-o", rutaExe.getFileName().toString()
             );
-            pb.directory(Paths.get(dirProyecto).toFile());
+            pb.directory(rutaC.getParent().toFile());
             pb.redirectErrorStream(true);
 
             Process proceso = pb.start();
@@ -56,7 +44,7 @@ public class GeneradorArchivoC {
 
             int exitCode = proceso.waitFor();
             if (exitCode == 0) {
-                System.out.println("[OK] Compilación exitosa. Ejecutable: " + nombreEjecutable);
+                System.out.println("[OK] Compilación exitosa. Ejecutable: " + rutaExe.toAbsolutePath());
                 return true;
             } else {
                 System.err.println("[ERROR] gcc salió con código: " + exitCode);
@@ -70,5 +58,12 @@ public class GeneradorArchivoC {
             }
             return false;
         }
+    }
+
+    public boolean generarYCompilar(String codigoC) {
+        String dirProyecto = System.getProperty("user.dir");
+        Path rutaC = Paths.get(dirProyecto, nombreArchivo);
+        Path rutaExe = Paths.get(dirProyecto, nombreEjecutable);
+        return generarYCompilar(codigoC, rutaC, rutaExe);
     }
 }

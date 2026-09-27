@@ -14,15 +14,15 @@ import com.example.piglatin.analizador.gramatica.PigParser;
 import org.antlr.v4.runtime.*;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ServicioCompilacionPig {
 
+    private ValidadorSemanticoPig ultimoValidador;
 
+    // ANALIZAR (sin generar C)
     public ResultadoCompilacionPig analizar(String codigoFuente, Path carpetaRaiz) {
-
         if (codigoFuente == null || codigoFuente.trim().isEmpty()) {
             return new ResultadoCompilacionPig(
                     false, null,
@@ -51,6 +51,76 @@ public class ServicioCompilacionPig {
         }
     }
 
+    // COMPILAR (analizar + generar C + gcc)
+    public ResultadoCompilacionPig compilar(String codigoFuente,
+                                            Path carpetaRaiz,
+                                            Path rutaDestinoC) {
+        ResultadoCompilacionPig resultado = analizar(codigoFuente, carpetaRaiz);
+
+        if (!resultado.isExitoso()) {
+            return resultado;
+        }
+
+        ValidadorSemanticoPig validador = ultimoValidador;
+        if (validador == null) {
+            return new ResultadoCompilacionPig(
+                    false, resultado.getPrograma(),
+                    List.of(), List.of(),
+                    List.of(new ErrorSemantico(-1, -1, "Compilación C",
+                            "No se pudo recuperar el validador semántico.")),
+                    List.of(),
+                    null, false, null
+            );
+        }
+
+        String codigoC;
+        boolean compilacionOk = false;
+        String rutaExe = null;
+        List<ErrorSemantico> errores = new ArrayList<>(resultado.getErroresSemanticos());
+
+        try {
+            codigoC = generarCodigoC(resultado.getPrograma(), validador);
+
+            // Ruta del ejecutable: mismo nombre que el .c, sin extensión.
+            String nombreSinExt = rutaDestinoC.getFileName().toString();
+            int punto = nombreSinExt.lastIndexOf('.');
+            if (punto > 0) nombreSinExt = nombreSinExt.substring(0, punto);
+            Path rutaExePath = rutaDestinoC.getParent().resolve(nombreSinExt);
+
+            GeneradorArchivoC gen = new GeneradorArchivoC();
+            compilacionOk = gen.generarYCompilar(codigoC, rutaDestinoC, rutaExePath);
+
+            if (compilacionOk) {
+                rutaExe = rutaExePath.toAbsolutePath().toString();
+            }
+        } catch (Exception e) {
+            errores.add(new ErrorSemantico(-1, -1, "Generación C",
+                    "Error al generar/compilar: " + e.getMessage()));
+            return new ResultadoCompilacionPig(
+                    false,
+                    resultado.getPrograma(),
+                    resultado.getErroresLexicos(),
+                    resultado.getErroresSintacticos(),
+                    errores,
+                    resultado.getMensajesInternos(),
+                    null, false, null
+            );
+        }
+
+        return new ResultadoCompilacionPig(
+                true,
+                resultado.getPrograma(),
+                resultado.getErroresLexicos(),
+                resultado.getErroresSintacticos(),
+                errores,
+                resultado.getMensajesInternos(),
+                codigoC,
+                compilacionOk,
+                rutaExe
+        );
+    }
+
+    // IMPLEMENTACIÓN INTERNA
     private ResultadoCompilacionPig analizarInterno(String codigoFuente, Path carpetaRaiz) {
 
         // 1. LEXER
@@ -135,10 +205,10 @@ public class ServicioCompilacionPig {
 
         // 4. VALIDACIÓN SEMÁNTICA
         List<ErrorSemantico> erroresSemanticos = new ArrayList<>();
-        ValidadorSemanticoPig validador = null;
         try {
-            validador = new ValidadorSemanticoPig(carpetaRaiz);
+            ValidadorSemanticoPig validador = new ValidadorSemanticoPig(carpetaRaiz);
             erroresSemanticos = validador.analizar(programa);
+            ultimoValidador = validador;
         } catch (Exception e) {
             return new ResultadoCompilacionPig(
                     false, programa,
@@ -150,30 +220,6 @@ public class ServicioCompilacionPig {
 
         boolean exitoso = erroresSemanticos.isEmpty();
 
-        // 5. GENERACIÓN DE C (solo si no hay errores semánticos)
-        String codigoC = null;
-        boolean compilacionOk = false;
-        String rutaExe = null;
-
-        if (exitoso) {
-            try {
-                codigoC = generarCodigoC(programa, validador);
-
-                GeneradorArchivoC generadorArchivo = new GeneradorArchivoC();
-                compilacionOk = generadorArchivo.generarYCompilar(codigoC);
-
-                if (compilacionOk) {
-                    rutaExe = Paths.get(System.getProperty("user.dir"), "programa")
-                            .toAbsolutePath().toString();
-                }
-            } catch (Exception e) {
-                erroresSemanticos.add(new ErrorSemantico(
-                        -1, -1, "Generación C",
-                        "Error al generar/compilar el código C: " + e.getMessage()));
-                exitoso = false;
-            }
-        }
-
         return new ResultadoCompilacionPig(
                 exitoso,
                 programa,
@@ -181,29 +227,26 @@ public class ServicioCompilacionPig {
                 List.of(),
                 erroresSemanticos,
                 List.of(),
-                codigoC,
-                compilacionOk,
-                rutaExe
+                null,
+                false,
+                null
         );
     }
 
-    // Genera el código C combinando imports (.y, .z) con el .pig
+    // GENERACION DE C
     private String generarCodigoC(NodoPrograma programa, ValidadorSemanticoPig validador) {
-        // Recoger imports (FuncionC, EstructuraC) del semántico
         var importaciones = validador.getImportaciones();
         var funcionesImportadas = importaciones.getFuncionesImportadas();
         var estructurasImportadas = importaciones.getEstructurasImportadas();
 
-        // Tabla del .pig
         var tabla = validador.getTabla();
 
-        // Variables globales y main del .pig
         var variablesGlobales = programa.aVariablesGlobalesC(tabla);
         var mainC = programa.aMainC(tabla);
 
-        // Combinar
         var funciones = new ArrayList<>(funcionesImportadas);
         funciones.add(mainC);
+
         var estructuras = new ArrayList<EstructuraC>();
         var nombresVistos = new java.util.HashSet<String>();
         for (var e : estructurasImportadas) {
@@ -212,7 +255,6 @@ public class ServicioCompilacionPig {
             }
         }
 
-        // Generar
         return new GeneradorC().generar(funciones, estructuras, variablesGlobales, false);
     }
 }

@@ -20,6 +20,7 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class VentanaPrincipal {
@@ -34,21 +35,21 @@ public class VentanaPrincipal {
     private final ServicioCompilacionZ servicioZ = new ServicioCompilacionZ();
     private final ServicioCompilacionPig servicioPig = new ServicioCompilacionPig();
 
+    // Última carpeta usada en el FileChooser de compilación
+    private Path ultimaCarpetaSalidaC;
+
     public VentanaPrincipal(Stage stage) {
         this.stage = stage;
         raiz = new BorderPane();
 
-        // --- Menú ---
         menu = new MenuPrincipal(stage);
         raiz.setTop(menu.getBarra());
 
-        // --- Árbol ---
         arbol = new ArbolTrabajo();
         arbol.setPrefWidth(260);
         arbol.setOnArchivoSeleccionado(this::abrirArchivoEnEditor);
         raiz.setLeft(arbol);
 
-        // --- Centro: pestañas + salida ---
         panelEditores = new PanelEditores();
         panelSalida = new PanelSalida();
 
@@ -59,12 +60,11 @@ public class VentanaPrincipal {
         SplitPane.setResizableWithParent(panelSalida, true);
         raiz.setCenter(splitCentral);
 
-        // --- Barra de estado ---
         Region barraEstado = placeholder("Barra de estado");
         barraEstado.setPrefHeight(24);
         raiz.setBottom(barraEstado);
 
-        // --- Conectar callbacks del menú ---
+        // Conectar callbacks del menú
         menu.onNuevoArchivo     = this::accionNuevoArchivo;
         menu.onAbrirArchivo     = this::accionAbrirArchivo;
         menu.onAbrirCarpeta     = this::accionAbrirCarpeta;
@@ -72,10 +72,11 @@ public class VentanaPrincipal {
         menu.onGuardarComo      = this::accionGuardarComo;
         menu.onDescargarArchivo = this::accionDescargarArchivo;
         menu.onDescargarCarpeta = this::accionDescargarCarpeta;
+        menu.onAnalizar         = this::accionAnalizar;
         menu.onCompilar         = this::accionCompilar;
         menu.onSalir            = () -> stage.close();
 
-        // --- Atajos de teclado a nivel de escena ---
+        // Atajos de teclado
         raiz.sceneProperty().addListener((obs, vieja, nueva) -> {
             if (nueva != null) {
                 nueva.getAccelerators().put(
@@ -95,6 +96,9 @@ public class VentanaPrincipal {
                         this::accionAbrirCarpeta);
                 nueva.getAccelerators().put(
                         new KeyCodeCombination(KeyCode.F5),
+                        this::accionAnalizar);
+                nueva.getAccelerators().put(
+                        new KeyCodeCombination(KeyCode.F6),
                         this::accionCompilar);
                 nueva.getAccelerators().put(
                         new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN),
@@ -106,7 +110,7 @@ public class VentanaPrincipal {
     public BorderPane getRaiz() { return raiz; }
     public PanelSalida getPanelSalida() { return panelSalida; }
 
-    // ---------- Acciones ----------
+    // Acciones de archivos
 
     private void accionAbrirArchivo() {
         GestorArchivos.dialogoAbrirArchivo(stage)
@@ -240,24 +244,28 @@ public class VentanaPrincipal {
         });
     }
 
-    private void accionCompilar() {
+    // ANALIZAR
+
+    private void accionAnalizar() {
         Optional<EditorCodigo> editorOpt = panelEditores.editorActivo();
         if (editorOpt.isEmpty()) {
-            panelSalida.agregarError("UI", -1 ,-1, "No hay pestaña activa.");
+            panelSalida.agregarError("UI", -1, -1, "No hay pestaña activa.");
             panelSalida.enfocarErrores();
             return;
         }
         EditorCodigo editor = editorOpt.get();
 
         if (editor.getArchivoActual() == null) {
-            panelSalida.agregarError("UI", -1, -1,"El archivo no está guardado. Guárdalo (Ctrl+S) antes de analizar.");
+            panelSalida.agregarError("UI", -1, -1,
+                    "El archivo no está guardado. Guárdalo (Ctrl+S) antes de analizar.");
             panelSalida.enfocarErrores();
             return;
         }
 
         Lenguaje lenguaje = editor.getLenguaje();
         if (!lenguaje.esConocido()) {
-            panelSalida.agregarError("UI", -1, -1,"No se pudo determinar el lenguaje del archivo.");
+            panelSalida.agregarError("UI", -1, -1,
+                    "No se pudo determinar el lenguaje del archivo.");
             panelSalida.enfocarErrores();
             return;
         }
@@ -265,18 +273,19 @@ public class VentanaPrincipal {
         panelSalida.limpiarTodo();
 
         if (lenguaje == Lenguaje.Y) {
-            compilarY(editor);
+            analizarY(editor);
         } else if (lenguaje == Lenguaje.ZETARIANO) {
-            compilarZ(editor);
+            analizarZ(editor);
         } else if (lenguaje == Lenguaje.PIG_LATIN) {
-            compilarPig(editor);
+            analizarPig(editor);
         } else {
-            panelSalida.agregarError("UI", -1, -1, "Aún no hay compilador para " + lenguaje.getNombreVisible() + ".");
+            panelSalida.agregarError("UI", -1, -1,
+                    "Lenguaje no soportado: " + lenguaje.getNombreVisible());
             panelSalida.enfocarErrores();
         }
     }
 
-    private void compilarY(EditorCodigo editor) {
+    private void analizarY(EditorCodigo editor) {
         panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como Y?");
 
         ResultadoCompilacionY resultado = servicioY.analizar(editor.getTexto());
@@ -295,15 +304,15 @@ public class VentanaPrincipal {
         }
 
         if (resultado.isExitoso()) {
-            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+            panelSalida.imprimirConsola("Análisis exitoso. Sin errores.");
         } else {
-            panelSalida.imprimirConsola(
-                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.imprimirConsola("Análisis finalizado con "
+                    + panelSalida.totalErrores() + " error(es).");
             panelSalida.enfocarErrores();
         }
     }
 
-    private void compilarZ(EditorCodigo editor) {
+    private void analizarZ(EditorCodigo editor) {
         panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como .z");
 
         ResultadoCompilacionZ resultado = servicioZ.analizar(editor.getTexto());
@@ -322,28 +331,18 @@ public class VentanaPrincipal {
         }
 
         if (resultado.isExitoso()) {
-            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
+            panelSalida.imprimirConsola("Análisis exitoso. Sin errores.");
         } else {
-            panelSalida.imprimirConsola(
-                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.imprimirConsola("Análisis finalizado con "
+                    + panelSalida.totalErrores() + " error(es).");
             panelSalida.enfocarErrores();
         }
     }
 
-    private static Region placeholder(String texto) {
-        Label l = new Label(texto);
-        l.setMaxWidth(Double.MAX_VALUE);
-        l.setMaxHeight(Double.MAX_VALUE);
-        l.setStyle("-fx-alignment: center; -fx-text-fill: #888; -fx-border-color: #ccc;");
-        return l;
-    }
-
-    private void compilarPig(EditorCodigo editor) {
+    private void analizarPig(EditorCodigo editor) {
         panelSalida.imprimirConsola("Analizando " + editor.getArchivoActual().getName() + " como Pig Latin");
 
-        // Determinar la carpeta raíz para las importaciones.
         File carpetaRaiz = obtenerCarpetaRaiz(editor);
-
         if (carpetaRaiz == null) {
             panelSalida.agregarError("UI", -1, -1,
                     "No se pudo determinar la carpeta raíz para las importaciones.");
@@ -370,47 +369,147 @@ public class VentanaPrincipal {
         }
 
         if (resultado.isExitoso()) {
-            panelSalida.imprimirConsola("Compilación exitosa. Sin errores.");
-
-            if (resultado.getCodigoCGenerado() != null) {
-                panelSalida.imprimirConsola("");
-                panelSalida.imprimirConsola("=== CÓDIGO C GENERADO ===");
-                panelSalida.imprimirConsola(resultado.getCodigoCGenerado());
-            }
-
-            if (resultado.isCompilacionCExitosa()) {
-                panelSalida.imprimirConsola("");
-                panelSalida.imprimirConsola("[OK] gcc compiló exitosamente.");
-                panelSalida.imprimirConsola("Ejecutable: " + resultado.getRutaEjecutable());
-            } else {
-                panelSalida.imprimirConsola("");
-                panelSalida.imprimirConsola("[ERROR] gcc no pudo compilar el código C.");
-            }
+            panelSalida.imprimirConsola("Análisis exitoso. Sin errores.");
         } else {
-            panelSalida.imprimirConsola(
-                    "Compilación finalizada con " + panelSalida.totalErrores() + " error(es).");
+            panelSalida.imprimirConsola("Análisis finalizado con "
+                    + panelSalida.totalErrores() + " error(es).");
             panelSalida.enfocarErrores();
         }
     }
 
-    /**
-     * Determina la carpeta raíz para resolver importaciones:
-     *   - Si hay carpeta abierta en el árbol, usarla.
-     *   - Si no, usar el directorio del archivo .pig actual.
-     */
+    // COMPILAR
+
+    private void accionCompilar() {
+        Optional<EditorCodigo> editorOpt = panelEditores.editorActivo();
+        if (editorOpt.isEmpty()) {
+            panelSalida.agregarError("UI", -1, -1, "No hay pestaña activa.");
+            panelSalida.enfocarErrores();
+            return;
+        }
+        EditorCodigo editor = editorOpt.get();
+
+        if (editor.getArchivoActual() == null) {
+            panelSalida.agregarError("UI", -1, -1,
+                    "El archivo no está guardado. Guárdalo (Ctrl+S) antes de compilar.");
+            panelSalida.enfocarErrores();
+            return;
+        }
+
+        Lenguaje lenguaje = editor.getLenguaje();
+        if (lenguaje != Lenguaje.PIG_LATIN) {
+            panelSalida.imprimirConsola(
+                    "La compilación a C solo está disponible para archivos .pig.");
+            return;
+        }
+
+        panelSalida.limpiarTodo();
+
+        File carpetaRaiz = obtenerCarpetaRaiz(editor);
+        if (carpetaRaiz == null) {
+            panelSalida.agregarError("UI", -1, -1,
+                    "No se pudo determinar la carpeta raíz para las importaciones.");
+            panelSalida.enfocarErrores();
+            return;
+        }
+
+        // Elegir ruta destino del .c
+        Path rutaDestinoC = pedirRutaDestinoC(editor);
+        if (rutaDestinoC == null) {
+            panelSalida.imprimirConsola("Compilación cancelada.");
+            return;
+        }
+
+        panelSalida.imprimirConsola("Compilando " + editor.getArchivoActual().getName()
+                + " hacia " + rutaDestinoC);
+
+        ResultadoCompilacionPig resultado = servicioPig.compilar(
+                editor.getTexto(),
+                carpetaRaiz.toPath(),
+                rutaDestinoC
+        );
+
+        for (ErrorPosicional e : resultado.getErroresLexicos()) {
+            panelSalida.agregarError("Léxico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorPosicional e : resultado.getErroresSintacticos()) {
+            panelSalida.agregarError("Sintáctico", e.getLinea(), e.getColumna(), e.getMensaje());
+        }
+        for (ErrorSemantico e : resultado.getErroresSemanticos()) {
+            panelSalida.agregarError(e.categoria(), e.linea(), e.columna(), e.mensaje());
+        }
+        for (String e : resultado.getMensajesInternos()) {
+            panelSalida.agregarError("Interno", -1, -1, e);
+        }
+
+        if (resultado.getCodigoCGenerado() != null) {
+            panelSalida.mostrarCuartetas(resultado.getCodigoCGenerado());
+        }
+
+        if (resultado.isExitoso() && resultado.isCompilacionCExitosa()) {
+            panelSalida.imprimirConsola("Compilación exitosa.");
+            panelSalida.imprimirConsola("Ejecutable: " + resultado.getRutaEjecutable());
+        } else if (resultado.isExitoso() && !resultado.isCompilacionCExitosa()) {
+            panelSalida.imprimirConsola("El código C se generó pero gcc falló.");
+            panelSalida.enfocarErrores();
+        } else {
+            panelSalida.imprimirConsola("Compilación finalizada con "
+                    + panelSalida.totalErrores() + " error(es).");
+            panelSalida.enfocarErrores();
+        }
+    }
+
+    private Path pedirRutaDestinoC(EditorCodigo editor) {
+        javafx.stage.FileChooser fc = new javafx.stage.FileChooser();
+        fc.setTitle("Guardar código C generado");
+
+        File archivoPig = editor.getArchivoActual();
+        String nombreBase = archivoPig.getName().replaceFirst("\\.[^.]+$", "");
+        fc.setInitialFileName(nombreBase + ".c");
+
+        File carpetaInicial;
+        if (ultimaCarpetaSalidaC != null && ultimaCarpetaSalidaC.toFile().exists()) {
+            carpetaInicial = ultimaCarpetaSalidaC.toFile();
+        } else {
+            carpetaInicial = archivoPig.getParentFile();
+        }
+        if (carpetaInicial != null && carpetaInicial.exists()) {
+            fc.setInitialDirectory(carpetaInicial);
+        }
+
+        fc.getExtensionFilters().add(
+                new javafx.stage.FileChooser.ExtensionFilter("Archivos C (*.c)", "*.c")
+        );
+
+        File destino = fc.showSaveDialog(stage);
+        if (destino == null) return null;
+
+        if (!destino.getName().toLowerCase().endsWith(".c")) {
+            destino = new File(destino.getParentFile(), destino.getName() + ".c");
+        }
+
+        ultimaCarpetaSalidaC = destino.getParentFile().toPath();
+        return destino.toPath();
+    }
+
+    // Helpers
+
     private File obtenerCarpetaRaiz(EditorCodigo editor) {
-        // 1. Intentar con la raíz del árbol de trabajo.
         if (arbol.getRoot() != null && arbol.getRoot().getValue() != null) {
             File raiz = arbol.getRoot().getValue();
             if (raiz.isDirectory()) return raiz;
         }
-
-        // 2. Fallback: directorio del archivo .pig.
         File archivoActual = editor.getArchivoActual();
         if (archivoActual != null) {
             return archivoActual.getParentFile();
         }
-
         return null;
+    }
+
+    private static Region placeholder(String texto) {
+        Label l = new Label(texto);
+        l.setMaxWidth(Double.MAX_VALUE);
+        l.setMaxHeight(Double.MAX_VALUE);
+        l.setStyle("-fx-alignment: center; -fx-text-fill: #888; -fx-border-color: #ccc;");
+        return l;
     }
 }
